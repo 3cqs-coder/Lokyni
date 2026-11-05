@@ -1,0 +1,53 @@
+# Browser (end-to-end) regression suite — Chromium and Firefox driven against the real server and a local
+# stub provider, headless (no display server needed; the Linux packages cover both engines).
+#
+# It runs ON DEMAND only (manual dispatch), in its OWN workflow, separate from the Desktop app build/release
+# workflow — so manually dispatching a desktop build never drags the browser suite along. It installs browser
+# runtimes and starts a server, so it is heavier and slower than the unit suite that gates each push.
+#
+# Note: the author runs `npm run test:e2e` locally, where the stub provider answers and the suite passes. The
+# answer-streaming cases currently time out on GitHub's hosted runner (the stub does not produce an answer
+# there) — a known gap, tracked separately; it is why e2e is kept out of the push and build paths.
+name: Browser (e2e)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24.11.1'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install browser runtimes
+        run: |
+          npx puppeteer browsers install chrome
+          npx puppeteer browsers install firefox
+      - name: Install Linux browser libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libnss3 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcups2 libdrm2 \
+            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
+            libasound2 libcairo2 libpango-1.0-0 libx11-xcb1 libxcb-dri3-0 libxcb1 \
+            libxext6 libxi6 libxrender1 libxss1 libxtst6 fonts-liberation \
+            libgtk-3-0 libdbus-glib-1-2 libxt6
+      - name: Run the browser suite
+        run: npm run test:e2e
+      - name: Upload browser-test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: test-results
+          if-no-files-found: ignore

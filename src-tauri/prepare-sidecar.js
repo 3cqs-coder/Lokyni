@@ -143,9 +143,9 @@ async function stageBundledLang() {
 function stageRuntime() {
   fs.mkdirSync(RUNTIME_DIR, { recursive: true });
   const dest = path.join(RUNTIME_DIR, process.platform === 'win32' ? 'node.exe' : 'node');
-  // For a macOS UNIVERSAL build the CI provides a pre-combined universal Node (both the Intel and
-  // Apple-Silicon slices, joined with `lipo`) at LOKYNI_RUNTIME_NODE, so the one .app runs natively on
-  // either architecture. Without it, fall back to this build's own runtime (the normal per-OS path).
+  // If a pre-combined Node is provided at LOKYNI_RUNTIME_NODE (for example a universal Node joined with
+  // `lipo`), bundle that. Otherwise fall back to this build's own runtime — the normal per-OS path, including
+  // the macOS arm64 build, where the host (Apple-Silicon) Node is exactly the one to ship.
   const provided = String(process.env.LOKYNI_RUNTIME_NODE || '').trim();
   const source = (provided && fs.existsSync(provided)) ? provided : process.execPath;
   fs.copyFileSync(source, dest);

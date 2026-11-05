@@ -1,13 +1,15 @@
 # Build the Lokyni desktop app for macOS, Windows, and Linux.
 #
 # A branch push or pull request runs the unit suite (all three platforms) and the Docker image
-# check. The browser (e2e) suite runs on demand (workflow_dispatch) rather than on every push,
-# since it needs browser runtimes and a running server. A version tag (or a manual run) also
-# builds the native installers on each operating system and attaches them to a release.
+# check. A version tag — or a manual run (workflow_dispatch), optionally build-only — also builds
+# the native installers on each operating system and (for a tag or a non-blank tag input) attaches
+# them to a release. The browser (e2e) suite is a SEPARATE, on-demand workflow (e2e.yml), so building
+# the desktop app does not drag it along.
 #
 # The app bundles real native modules (the vector index, the local reranker runtime, image
 # handling), which cannot be cross-compiled, so each installer is built on its own operating
-# system. Dependencies are installed fresh on each runner so the bundled binaries match the
+# system. The macOS app is Apple-Silicon (arm64) only — a bundled native ML runtime ships no Intel
+# macOS binary. Dependencies are installed fresh on each runner so the bundled binaries match the
 # target platform.
 
 name: Desktop app
@@ -64,43 +66,6 @@ jobs:
       - name: Run the unit suite
         run: npm run test:unit
 
-  # Browser regression suite. Runs Chromium and Firefox against the real server and a local stub
-  # provider. Headless, so no display server is needed; the Linux packages cover both engines.
-  # Run on demand (manual dispatch) rather than on every push: it installs browser runtimes and
-  # starts a server, so it is heavier and slower than the unit suite that gates each push.
-  e2e:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Install browser runtimes
-        run: |
-          npx puppeteer browsers install chrome
-          npx puppeteer browsers install firefox
-      - name: Install Linux browser libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libnss3 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcups2 libdrm2 \
-            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
-            libasound2 libcairo2 libpango-1.0-0 libx11-xcb1 libxcb-dri3-0 libxcb1 \
-            libxext6 libxi6 libxrender1 libxss1 libxtst6 fonts-liberation \
-            libgtk-3-0 libdbus-glib-1-2 libxt6
-      - name: Run the browser suite
-        run: npm run test:e2e
-      - name: Upload browser-test screenshots
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-screenshots
-          path: test-results
-          if-no-files-found: ignore
-
   # Build and exercise the server image. A writable state volume must serve /status; a read-only
   # state mount must fail with the actionable permissions message. The static Docker guards run in
   # the unit suite; this job proves the image itself starts.
@@ -152,12 +117,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ONE macOS runner builds a UNIVERSAL installer (--target universal-apple-darwin) that runs
-          # natively on both Apple Silicon and Intel. This replaces the earlier per-arch approach: GitHub
-          # retired the macos-13 Intel image in December 2025, and all x86_64 macOS runners are removed in
-          # August 2027, so a dedicated Intel runner has no future. The universal build runs on the
-          # Apple-Silicon image and lipo's in the Intel slice; the bundled Node runtime and native addons
-          # are made universal in a dedicated step so the one .app launches on either architecture.
+          # The macOS runner (macos-latest, Apple Silicon) builds an arm64 installer. A bundled native ML
+          # runtime (onnxruntime-node) ships an arm64 macOS binary only, so a universal (Intel + Apple Silicon)
+          # build is not possible with it — and Intel Macs are end-of-life with their GitHub runners retired.
+          # The bundled Node and native addons come from the host install, so the .app is Apple-Silicon native.
           - os: macos-latest
             label: macos
           - os: windows-latest
@@ -219,47 +182,18 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      # macOS ships ONE universal installer that runs natively on both Intel and Apple Silicon, built on
-      # the Apple-Silicon runner (the Intel runner image is retired). Three things must be universal:
-      #   1. the Rust shell — Tauri lipo's it when given --target universal-apple-darwin (set below);
-      #   2. the bundled Node runtime — built here as a universal binary from both official arch tarballs,
-      #      checksum-verified and proven to run, exposed via LOKYNI_RUNTIME_NODE for prepare-sidecar;
-      #   3. the bundled native addons (faiss-node, @napi-rs/canvas, sharp, fsevents; onnxruntime already
-      #      ships every arch) — a second x64 install is folded into the arm64 tree (lipo / arch-file copy)
-      #      and then a fail-loud check proves every darwin .node works on both architectures, so a
-      #      missing x64 prebuilt fails the build here rather than shipping an app that crashes on Intel.
-      - name: Prepare the universal macOS runtime, native addons, and build target
+      # The macOS app is Apple-Silicon (arm64) only. A bundled native ML runtime (onnxruntime-node) ships an
+      # arm64 macOS binary and NO Intel (darwin/x64) one, so a universal build is not possible with it — and an
+      # Intel Mac could not run the ML stack anyway. Intel Macs are end-of-life and GitHub's Intel runners are
+      # retired, so this is the only architecture worth building. macos-latest is Apple Silicon, so the host
+      # target is arm64; the bundled Node and native addons come from the normal host install above. The Tauri
+      # target is pinned explicitly for a stable, predictable bundle path.
+      - name: Target Apple Silicon (arm64)
         if: matrix.label == 'macos'
         shell: bash
         run: |
-          set -euo pipefail
-          rustup target add x86_64-apple-darwin aarch64-apple-darwin
-          # Universal Node from the two official per-arch tarballs for the pinned version.
-          NODE_VER="$(node -v | sed 's/^v//')"
-          work="$RUNNER_TEMP/universal-node"; mkdir -p "$work"; ( cd "$work"
-            base="https://nodejs.org/dist/v$NODE_VER"
-            curl -fsSLO "$base/SHASUMS256.txt"
-            for a in x64 arm64; do curl -fsSLO "$base/node-v$NODE_VER-darwin-$a.tar.gz"; done
-            grep -E "node-v$NODE_VER-darwin-(x64|arm64)\.tar\.gz$" SHASUMS256.txt | shasum -a 256 -c -
-            for a in x64 arm64; do tar -xzf "node-v$NODE_VER-darwin-$a.tar.gz"; done
-            lipo -create -output universal-node "node-v$NODE_VER-darwin-arm64/bin/node" "node-v$NODE_VER-darwin-x64/bin/node"
-            chmod +x universal-node
-            archs="$(lipo -archs universal-node)"; echo "universal-node archs: $archs"
-            echo "$archs" | grep -qw x86_64 && echo "$archs" | grep -qw arm64   # both slices present, or fail the build
-            test "$(./universal-node --version)" = "v$NODE_VER" )
-          echo "LOKYNI_RUNTIME_NODE=$work/universal-node" >> "$GITHUB_ENV"
-          echo "LOKYNI_TAURI_TARGET=universal-apple-darwin" >> "$GITHUB_ENV"
-          # Second install of the OTHER architecture's native binaries, folded into the arm64 tree so every
-          # bundled .node is universal. This must let install scripts RUN (no --ignore-scripts): the native
-          # addons (faiss-node, sharp) fetch their prebuilt binary through a postinstall step, and the
-          # npm_config_*arch/platform env vars steer that fetch to the x64 darwin build rather than the host
-          # (arm64) one. The main install above already runs scripts, so this adds no new trust surface. The
-          # verify step then fails the build if any darwin .node did not end up universal.
-          x64dir="$RUNNER_TEMP/x64-install"; mkdir -p "$x64dir"; cp package.json "$x64dir/"
-          ( cd "$x64dir" && npm_config_arch=x64 npm_config_target_arch=x64 npm_config_platform=darwin \
-              npm install --cpu=x64 --os=darwin --no-audit --no-fund )
-          node src-tauri/universal-mac-natives.js merge "$x64dir/node_modules"
-          node src-tauri/universal-mac-natives.js verify node_modules
+          rustup target add aarch64-apple-darwin
+          echo "LOKYNI_TAURI_TARGET=aarch64-apple-darwin" >> "$GITHUB_ENV"
 
       - name: Build the installers
         run: npm run tauri:build
@@ -271,15 +205,15 @@ jobs:
         if: matrix.label == 'macos'
         shell: bash
         run: |
-          # The universal build lands under target/universal-apple-darwin/…; search any target path.
+          # The arm64 build lands under target/aarch64-apple-darwin/…; search any target path.
           APP=$(find src-tauri/target -type d -path '*/release/bundle/macos/*.app' | head -n1)
           if [ -z "$APP" ]; then echo "No .app bundle found"; exit 1; fi
           codesign --force --deep --sign - --timestamp=none "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
-          # Prove the shipped app really is universal (both slices in the shell and the bundled Node).
+          # Confirm the shipped app is arm64 (Apple Silicon); the bundled Node must be arm64 or it would not launch.
           lipo -info "$APP/Contents/MacOS/"* || true
           NODE_BIN=$(find "$APP" -type f -name node | head -n1)
-          if [ -n "$NODE_BIN" ]; then lipo -archs "$NODE_BIN"; lipo -archs "$NODE_BIN" | grep -q x86_64 && lipo -archs "$NODE_BIN" | grep -q arm64 || { echo "::error::bundled Node is not universal"; exit 1; }; fi
+          if [ -n "$NODE_BIN" ]; then lipo -archs "$NODE_BIN"; lipo -archs "$NODE_BIN" | grep -q arm64 || { echo "::error::bundled Node is not arm64"; exit 1; }; fi
 
       - name: Collect installers
         uses: actions/upload-artifact@v4
@@ -287,7 +221,7 @@ jobs:
           name: lokyni-${{ matrix.label }}
           if-no-files-found: error
           # target/**/bundle covers both the host-target path (Windows/Linux) and the explicit-target
-          # path (target/universal-apple-darwin/release/bundle for the macOS universal build).
+          # path (target/aarch64-apple-darwin/release/bundle for the macOS arm64 build).
           path: |
             src-tauri/target/**/bundle/**/*.dmg
             src-tauri/target/**/bundle/**/*.msi
