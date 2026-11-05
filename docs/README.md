@@ -1836,10 +1836,27 @@ Lokyni ships as a native desktop app for macOS, Windows, and Linux. It opens in 
 window with its own launcher icon and starts the local server for you, so there is nothing
 to run in a terminal. The window is a thin wrapper around the same local app, so the interface
 and features work as they do in a browser. On macOS, the bundled runtime requires macOS 13.5
-or later. The macOS app is ad-hoc signed and the Windows installers are unsigned; no
-distribution signing certificates are available, so macOS may ask you to right-click and choose
-Open on first launch. When you close the window while Lokyni is still indexing or answering, it
-asks before quitting so that work isn't cut off.
+or later. When you close the window while Lokyni is still indexing or answering, it asks before
+quitting so that work isn't cut off.
+
+**First launch on macOS.** The Mac app is ad-hoc signed for local use rather than through a paid
+Apple Developer account, and macOS quarantines anything downloaded from the web. So the first time
+you open it, you may see a warning that it "cannot be opened because the developer cannot be
+verified," or that the app "is damaged and can't be opened." The app is not damaged. To open it,
+try to open Lokyni once and dismiss the warning. Then go to **System Settings → Privacy & Security**,
+scroll to the Security section, and choose **Open Anyway**. If you prefer the command line, run:
+
+```
+xattr -dr com.apple.quarantine /Applications/Lokyni.app
+```
+
+You do this once per install, and again after an update, because each download is quarantined the
+same way. (Older versions of macOS let you right-click the app and choose **Open**; recent versions
+removed that shortcut for apps signed this way, so use **Open Anyway**.)
+
+**First launch on Windows.** The installers are unsigned, so Windows SmartScreen may warn that it
+"protected your PC." Choose **More info**, then **Run anyway** to proceed. Linux packages
+(`.deb` / `.rpm`) install normally.
 
 Adding a web page by URL tries a plain HTTP fetch first, then renders with a browser engine only when the page needs it. This is the Auto default. **Web page capture** in Settings can force HTTP only, which needs no browser, or Browser only, which always renders. If no browser is installed, plain pages still import, and a page that requires rendering reports that it could not be captured. Live web search and deep research never need a browser engine because they read pages with a plain fetch.
 
