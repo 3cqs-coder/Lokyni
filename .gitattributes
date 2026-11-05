@@ -1,6 +1,16 @@
-# Keep the Rust manifest/lock files LF on every platform. The version-sync step and its
-# drift-guard test match the crate entry across a newline; a CRLF checkout (Windows with
-# core.autocrlf) would otherwise break both. Pinning eol here makes the checkout stable
-# regardless of the contributor's git line-ending settings.
+# Normalize line endings for ALL text files to LF in the repository AND on checkout, on every
+# platform. Source and tests are parsed with line-based and multi-line regexes that assume LF; a
+# CRLF checkout (Windows with core.autocrlf) would otherwise break them. git auto-detects binary
+# files and leaves them untouched, and the explicit rules below are belt-and-suspenders for the
+# binary assets this repo ships so they can never be line-ending converted.
+* text=auto eol=lf
+
+# Binary assets — never treated as text (so never line-ending converted or diffed as text).
+*.png  binary
+*.woff2 binary
+*.ico  binary
+
+# Kept for emphasis even though the global rule already covers them: files whose exact bytes a
+# drift-guard / version-sync step matches across a newline must stay LF.
 src-tauri/Cargo.lock text eol=lf
 src-tauri/Cargo.toml text eol=lf
