@@ -22,11 +22,14 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+-*'
   pull_request:
     branches: [master, main]
-  workflow_dispatch:
+  workflow_dispatch:                 # start a build by hand at any time
     inputs:
       release_tag:
-        description: 'Release tag to build installers for (for example 1.0.0).'
-        required: true
+        # The tag to build and attach the installers to (for example 1.0.0). Leave BLANK for a build-only run:
+        # every platform's installers still upload as downloadable run artifacts, but no release is created or
+        # changed. Enter a tag only when you intend to publish (or replace) that release's assets.
+        description: 'Release tag to publish to (e.g. 1.0.0). Leave blank to build installers only, no release.'
+        required: false
 
 permissions:
   contents: read
@@ -177,6 +180,10 @@ jobs:
             TAG="${GITHUB_REF_NAME}"
           fi
           TAG="${TAG#v}"   # tolerate an optional leading v on the tag
+          if [ -z "$TAG" ]; then
+            echo "Build-only run (no release tag) — skipping the version match; installers upload as run artifacts, no release is made."
+            exit 0
+          fi
           if [ "$PKG" != "$TAG" ]; then
             echo "::error::Release reference '$TAG' does not match package.json version '$PKG'. Bump the version before tagging."
             exit 1
