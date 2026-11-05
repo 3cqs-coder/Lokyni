@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged into the generated macOS Info.plist at bundle time. macOS requires a usage-description string before
+     an app may access the microphone; without it the system denies the request (and can terminate the app) with
+     no prompt, which is why the in-app microphone / hands-free buttons did nothing on the desktop build. The
+     microphone is used only for the opt-in voice features, and the audio is transcribed locally. -->
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Lokyni uses the microphone only for the voice features you turn on, to transcribe a question you speak. The audio is processed locally on your machine and is never sent anywhere.</string>
+</dict>
+</plist>

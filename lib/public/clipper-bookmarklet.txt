@@ -1,0 +1,18 @@
+/* Lokyni clipper bookmarklet — the single source for the "Clip to Lokyni" button.
+   Settings -> Browser clipper fetches this template, fills __LOKYNI_HOST__ and __LOKYNI_KEY__ with
+   this install's origin and a new write-scoped key (JSON-encoded, so any character is safe), strips
+   this comment, and collapses it to a one-line javascript: URL the user drags to their bookmarks
+   bar. It reads the CURRENT page — including pages the user is logged into, because it runs in the
+   page's own context and sees the already-rendered, authenticated DOM — and posts the content to
+   Lokyni's write-scoped ingest API. Nothing else defines the bookmarklet; keep it only here. */
+javascript:(function(){
+var H=__LOKYNI_HOST__,K=__LOKYNI_KEY__;
+var e=document.querySelector('article,main,[role=main]')||document.body;
+var h=e?e.innerHTML:document.body.innerHTML,t=document.title||location.href;
+var T=function(m,o){var d=document.createElement('div');d.textContent=m;d.style.cssText='position:fixed;z-index:2147483647;top:16px;right:16px;padding:10px 14px;border-radius:8px;font:14px system-ui,sans-serif;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.3);background:'+(o?'#2563eb':'#dc2626');document.body.appendChild(d);setTimeout(function(){d.remove();},3500);};
+T('Clipping to Lokyni…',1);
+fetch(H+'/api/v1/ingest-url',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+K},body:JSON.stringify({url:location.href,title:t,html:h})})
+.then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+.then(function(x){T(x.ok&&x.j&&x.j.ok?('Saved to Lokyni: '+(x.j.title||'page')):('Lokyni: '+((x.j&&x.j.error)||'could not save')),x.ok&&x.j&&x.j.ok);})
+.catch(function(e){T('Lokyni: '+e.message,0);});
+})();

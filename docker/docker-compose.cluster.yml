@@ -1,0 +1,110 @@
+# Lokyni in CLUSTER mode — one PRIMARY plus one read REPLICA over a single shared data volume, for a
+# busier team that needs more than one instance. This is the networked/server setup; on a laptop the
+# desktop app or the installable web app is simpler. For a single server instance, use docker-compose.yml.
+#
+# How it works: every instance shares one volume (lokyni-state) mounted at /state, so the accounts, the
+# index, the sign-in secret, and the audit trail are all shared. The primary does all indexing and writes;
+# the replica serves search, chat, and reads and refuses writes with a 409. Roles are static, so there is
+# never more than one writer and no split-brain. Run exactly ONE primary.
+#
+# Quick start:
+#   docker compose -f docker/docker-compose.cluster.yml up -d
+#   docker compose -f docker/docker-compose.cluster.yml exec ollama ollama pull llama3.2
+#   docker compose -f docker/docker-compose.cluster.yml exec ollama ollama pull bge-m3
+# The primary is on http://127.0.0.1:7887 and the replica on http://127.0.0.1:7888. In production, put a
+# reverse proxy or load balancer in front of both: send the interactive UI and all write actions to the
+# primary, read-only traffic to either, turn on sticky sessions for the chat WebSocket (/ws), and forward
+# X-Forwarded-Proto. Scale out by adding more replica services that mount the same volume.
+#
+# Sizing: each instance loads the full index into its OWN memory, so a primary + one replica roughly doubles
+# RAM versus a single node (plus whatever Ollama needs) — size the host accordingly. Operational note: the
+# instances share the volume, so their daily log file is shared too; tell them apart by container name.
+
+# Shared, hardened service definition. Each instance overrides only its name, role, port, and dependencies.
+x-lokyni-base: &lokyni-base
+  image: lokyni
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+  restart: unless-stopped
+  # No `init:` — the image's ENTRYPOINT already runs tini as PID 1 (reaps re-parented browser helpers and
+  # forwards signals), so a compose init would just wrap it in a second, redundant init.
+  stop_grace_period: 30s     # give in-flight indexing/answering time to finish and caches to flush
+  volumes:
+    # ONE named volume shared by every instance — this is what makes them a cluster. It holds
+    # config/config.json, the sign-in secret, the document index and workspaces (./data), and the
+    # downloaded reranker model. To index host folders, mount each read-only and add it under
+    # Documents -> Indexed folders using its in-container path, on the PRIMARY:
+    # - /path/on/host/Documents:/documents:ro
+    - lokyni-state:/state
+  read_only: true            # the whole root filesystem is read-only; every write goes to the volume or tmpfs
+  tmpfs:
+    - /tmp                   # Chromium scratch and temp files (the app runs with --disable-dev-shm-usage)
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  healthcheck:
+    test: ["CMD", "node", "/app/docker/healthcheck.js"]   # probes /status, which needs no sign-in
+    interval: 30s
+    timeout: 5s
+    start_period: 40s
+    retries: 3
+
+services:
+  # The one writer. It owns indexing and holds the single-writer lock on the shared volume.
+  lokyni-primary:
+    <<: *lokyni-base
+    container_name: lokyni-primary
+    command: ["node", "/app/lokyni.js", "--primary", "--port", "7887", "--bind", "0.0.0.0", "--enforce-host-guard", "--ollama-host", "http://ollama:11434"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      # Loopback only — the control plane is not password-protected, so reach it through an
+      # authenticating reverse proxy (see the README's "Reverse Proxy Setup"), not by binding 0.0.0.0.
+      - "127.0.0.1:7887:7887"
+
+  # A read replica. Add more copies (lokyni-replica-2, ...) on more ports to serve more readers.
+  lokyni-replica:
+    <<: *lokyni-base
+    container_name: lokyni-replica
+    command: ["node", "/app/lokyni.js", "--replica", "--port", "7888", "--bind", "0.0.0.0", "--enforce-host-guard", "--ollama-host", "http://ollama:11434"]
+    # Point the health probe at this instance's port (the shared healthcheck defaults to 7887). Without this the
+    # replica would be reported unhealthy forever (nothing listens on 7887 in this container).
+    environment:
+      - HEALTHCHECK_PORT=7888
+    depends_on:
+      ollama:
+        condition: service_healthy
+      lokyni-primary:
+        condition: service_healthy   # let the primary build the index before the replica loads it read-only
+    ports:
+      - "127.0.0.1:7888:7888"
+
+  # Optional bundled Ollama, shared by every instance, so the stack answers with a fully local model out of
+  # the box and works offline. Delete this service (and the depends_on above) to use an Ollama you already
+  # run, then point --ollama-host at it. Its port is deliberately NOT published (Ollama has no auth).
+  ollama:
+    image: ollama/ollama:0.22.1
+    container_name: lokyni-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    # GPU acceleration (NVIDIA): install the NVIDIA Container Toolkit on the host, then uncomment. This
+    # does not apply on macOS; without a GPU, Ollama runs on the CPU.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  lokyni-state:
+  ollama-models:

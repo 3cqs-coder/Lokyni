@@ -1,0 +1,65 @@
+
+Lokyni — private document intelligence
+
+  node lokyni.js                 start the server in the foreground
+  node lokyni.js debug           start with detailed retrieval logging
+  node lokyni.js --reindex       wipe the index and rebuild it from your documents,
+                                 then start normally (use if search or related-docs
+                                 behave oddly after moving the documents folder).
+                                 Prompts for confirmation first; add --yes to skip it.
+
+Runtime flags (override config.json; environment variables are not used):
+  --port <n>                     port the web UI listens on (default {{DEFAULT_PORT}})
+  --bind <addr>                  address to bind (default 127.0.0.1; use 0.0.0.0 to
+                                 reach it from other machines — see --enforce-host-guard)
+  --ollama-host <url>            Ollama base URL (default http://localhost:11434)
+  --data-dir <path>              where Lokyni keeps its data (default: a data folder in
+                                 the working directory)
+  --enforce-host-guard           keep the DNS-rebinding Host guard active even when bound
+                                 to 0.0.0.0 (set by the Docker image); only loopback and
+                                 configured trustedHosts are then accepted
+  --dns-order <order>            DNS result order: ipv4first, ipv6first, or verbatim
+
+Background service (optional — pm2 works too):
+  node lokyni.js --install       install to ~/.lokyni, run at login, restart on crash
+  node lokyni.js --install --in-place
+                                 register where it already sits (no copy)
+  node lokyni.js --install --relocate
+                                 force a copy to ~/.lokyni even from a git checkout
+  node lokyni.js --install --no-open
+                                 don't open the web UI when the install finishes
+  node lokyni.js --uninstall     remove the service and stop
+  node lokyni.js --restart       restart the running service
+  node lokyni.js --status        show running state, index and provider health
+  node lokyni.js --open          open the web UI in your browser
+
+Accounts (multi-user):
+  node lokyni.js --reset-password <username> [--password <new>]
+                                 reset a user's password on this machine (account
+                                 recovery). Omit --password to be prompted, or pipe
+                                 it in. Signs out that user's other sessions.
+
+Scaling (shared data directory):
+  node lokyni.js --primary       run as the writer in a cluster (indexes + serves)
+  node lokyni.js --replica       run as a read-only replica (serves the shared index,
+                                 refreshes from it, refuses writes). Point several
+                                 replicas at the same --data-dir behind a load
+                                 balancer; exactly one --primary does the indexing.
+
+Quality evaluation (CI / automation):
+  node lokyni.js --eval [workspace]
+                                 score this workspace's saved evaluation questions
+                                 (faithfulness, answer relevancy, context precision),
+                                 print a report, and exit. Uses your own model and
+                                 documents; nothing leaves the machine. Defaults to the
+                                 active workspace. Exits non-zero if there is nothing to
+                                 evaluate or the index can't build.
+
+MCP (Model Context Protocol):
+  node lokyni.js --mcp           run as an MCP server over stdio, so MCP clients can
+                                 search this corpus as a tool. No API key needed — stdio
+                                 is a trusted local caller. (Network MCP is also served
+                                 at POST /mcp on the web server, and DOES require an
+                                 API key.)
+
+Lokyni is free software under the GNU Affero General Public License v3. See the LICENSE file.

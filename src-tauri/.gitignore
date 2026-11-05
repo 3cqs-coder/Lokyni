@@ -1,0 +1,8 @@
+# Rust build output
+/target/
+
+# Tauri's generated files
+/gen/
+
+# Staged application bundle and bundled runtime (produced by prepare-sidecar.js)
+/app/

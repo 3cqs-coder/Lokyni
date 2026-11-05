@@ -1,0 +1,24 @@
+#!/bin/sh
+# Pre-commit guard: run the offline unit suite so a regression can never be committed.
+# The suite runs in parallel and needs no model or network. Enable it once per clone with:
+#   git config core.hooksPath .githooks
+# Bypass a single commit in a pinch with:  git commit --no-verify
+
+# Fail fast with a CLEAR message when the shell's node is too old (this repo needs Node >= 22.22.0, per
+# package.json "engines"). An older node makes the suite fail with a cryptic ESM error instead, which looks like
+# a slow or broken commit — point the committer at the fix instead. Let node itself compare major.minor so the
+# whole >= 22.22 floor is enforced, not just the major; if node is missing the normal run below fails anyway.
+if command -v node >/dev/null 2>&1; then
+  node -e 'var v=process.versions.node.split(".").map(Number); process.exit((v[0]>22||(v[0]===22&&v[1]>=22))?0:1)' || {
+    echo "" >&2
+    echo "Commit blocked: this repo needs Node >= 22.22.0, but 'node' here is $(node -v)." >&2
+    echo "Switch your shell's node (e.g. 'nvm use 22' or newer) and commit again." >&2
+    exit 1
+  }
+fi
+
+node lib/test/unit/run.js || {
+  echo "" >&2
+  echo "Commit blocked: unit tests failed. Fix them, or rerun with 'git commit --no-verify' to bypass." >&2
+  exit 1
+}

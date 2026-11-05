@@ -1,0 +1,30 @@
+# The build context is the repository root. Keep it small and never bake local state, secrets, or
+# build output into the image. Production dependencies are installed fresh inside the builder stage,
+# and the runtime stage copies an explicit file set.
+.git
+.github
+.claude
+node_modules
+**/node_modules
+# The lockfile is not used (dependencies resolve from package.json ranges); never ship it.
+package-lock.json
+
+# The Tauri desktop app and its large Rust build output are not part of the server image.
+src-tauri
+
+# Local runtime state and a developer's own configuration — never ship these.
+data
+uploads
+config/config.json
+*.log
+logs
+
+# Tests, developer references, and internal docs are not needed at runtime.
+lib/test
+lib/scripts
+dev
+docs/BACKLOG.md
+
+**/.DS_Store
+.env
+.env.*

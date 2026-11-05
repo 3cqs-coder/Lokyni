@@ -1,0 +1,123 @@
+name: Safari pass
+
+# WebKit coverage on a real Safari, separate from the Chromium/Firefox suite. Dispatch-only until a hosted
+# macOS runner proves it can open a Safari WebDriver session. When that is proven, the same job can be added
+# to the push/release triggers without changing the pass itself.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: safari-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep this aligned with .github/workflows/desktop.yml and the Docker bases. The version-drift unit test
+  # fails if these pins diverge.
+  NODE_VERSION: '24.11.1'
+  # The Safari pass needs no Chromium; skip Puppeteer's browser download.
+  PUPPETEER_SKIP_DOWNLOAD: '1'
+
+jobs:
+  safari:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      # The one-time setting can also be enabled in the Safari UI. On a hosted runner the passwordless sudo
+      # path may work; if it does not, the probe below records the limitation and the job skips the pass.
+      - name: Enable Safari WebDriver
+        timeout-minutes: 2
+        continue-on-error: true
+        run: |
+          sudo /usr/bin/safaridriver --enable || \
+            echo "::warning::safaridriver --enable did not complete; probing whether a session is possible."
+          /usr/bin/safaridriver --version || true
+
+      # Never fail the build because the runner cannot perform Safari's manual setup. Probe first; run the
+      # pass only when a real session can be created. A failure after a successful probe is a real failure.
+      - name: Probe Safari WebDriver
+        id: probe
+        shell: bash
+        timeout-minutes: 3
+        continue-on-error: true
+        run: |
+          set +e
+          npm run e2e:safari:probe > /tmp/safari-probe.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/safari-probe.log 2>/dev/null || true
+          if [ "$code" -ne 0 ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Safari WebDriver is unavailable on this runner; skipping the pass. The probe output lists the manual setting steps."
+            exit 0
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Run the Safari pass
+        id: safari
+        if: steps.probe.outputs.available == 'true'
+        shell: bash
+        run: |
+          set +e
+          npm run e2e:safari
+          code=$?
+          set -e
+          if [ "$code" -eq 2 ]; then
+            echo "::warning::Safari WebDriver became unavailable after the probe; skipping the pass."
+            echo "outcome=skipped" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$code" -eq 0 ]; then
+            echo "outcome=passed" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=failed" >> "$GITHUB_OUTPUT"
+          fi
+          exit "$code"
+
+      - name: Record the result
+        if: always()
+        shell: bash
+        run: |
+          OUTCOME="${{ steps.safari.outputs.outcome }}"
+          if [ "${{ steps.probe.outputs.available }}" != "true" ]; then
+            OUTCOME="skipped"
+          fi
+          [ -n "$OUTCOME" ] || OUTCOME="failed"
+          {
+            echo "### Safari pass"
+            echo ""
+            echo "- Outcome: $OUTCOME"
+            echo "- Node: \`$(node --version)\`"
+            echo "- Driver: \`$(/usr/bin/safaridriver --version 2>/dev/null || echo unknown)\`"
+            if [ "$OUTCOME" = "skipped" ]; then
+              echo ""
+              echo "The pass was skipped because this runner could not open a Safari WebDriver session."
+              echo "That is an environment limitation, not a build failure."
+              if [ -s /tmp/safari-probe.log ]; then
+                echo ""
+                echo '```'
+                sed -n '1,24p' /tmp/safari-probe.log
+                echo '```'
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Safari screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safari-screenshots
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

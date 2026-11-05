@@ -1,0 +1,153 @@
+name: Windows pass
+
+# Chromium coverage and installer validation on Windows. Dispatch-only until a hosted run is green; the workflow
+# then can be promoted to the normal push/tag triggers. No signing certificate and no GUI session are required.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep this aligned with .github/workflows/desktop.yml and the Docker bases. The version-drift unit test
+  # fails if these pins diverge.
+  NODE_VERSION: '24.11.1'
+  # The e2e job installs Chrome explicitly; the installer build does not need a bundled browser cache.
+  PUPPETEER_SKIP_DOWNLOAD: '1'
+
+jobs:
+  e2e:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      E2E_BROWSER: chromium
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium
+        env:
+          # The workflow-wide skip saves the build-only browser download; the explicit installer must override it.
+          PUPPETEER_SKIP_DOWNLOAD: '0'
+        run: npx puppeteer browsers install chrome
+
+      - name: Run the Chromium suite
+        run: npm run test:e2e
+
+      - name: Upload browser-test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-e2e-screenshots
+          path: test-results
+          if-no-files-found: ignore
+
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build the Windows installers
+        run: npm run tauri:build
+
+      # Silent install both artifacts, prove the packaged application and its version, then uninstall. The
+      # product name and expected version come from the same files the build uses, not from literals here.
+      - name: Install and verify NSIS and MSI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $product = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).productName
+          $expected = (Get-Content package.json -Raw | ConvertFrom-Json).version
+
+          $nsis = Get-ChildItem -Path src-tauri/target -Recurse -Filter '*setup.exe' | Select-Object -First 1
+          $msi = Get-ChildItem -Path src-tauri/target -Recurse -Filter '*.msi' | Select-Object -First 1
+          if (-not $nsis) { throw 'The NSIS installer was not produced.' }
+          if (-not $msi) { throw 'The MSI installer was not produced.' }
+
+          # The installed executable is named after the Rust crate, not necessarily the product name. Find it by
+          # the version resource the build stamps from package.json, and never mistake the uninstaller for it.
+          function Find-App([string[]]$searchRoots) {
+            foreach ($root in $searchRoots) {
+              if (-not (Test-Path $root)) { continue }
+              $candidate = Get-ChildItem -Path $root -File -Filter '*.exe' -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -notmatch '^Uninstall' -and $_.VersionInfo.ProductVersion -like "$expected*" } |
+                Select-Object -First 1
+              if ($candidate) { return $candidate.FullName }
+            }
+            $fallback = Get-ChildItem -Path $searchRoots -Recurse -File -Filter '*.exe' -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -notmatch '^Uninstall' -and $_.VersionInfo.ProductVersion -like "$expected*" } |
+              Select-Object -First 1
+            if ($fallback) { return $fallback.FullName }
+            return $null
+          }
+          function Assert-App([string]$label, [string[]]$searchRoots) {
+            $exe = Find-App $searchRoots
+            if (-not $exe) { throw "$label did not install an executable with version $expected." }
+            $sidecar = $null
+            foreach ($root in $searchRoots) {
+              if (-not (Test-Path $root)) { continue }
+              $sidecar = Get-ChildItem -Path $root -Recurse -Filter 'lokyni.js' -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+              if ($sidecar) { break }
+            }
+            if (-not $sidecar) { throw "$label installed the app without its sidecar (lokyni.js)." }
+            $actual = (Get-Item $exe).VersionInfo.ProductVersion
+            if (-not $actual.StartsWith($expected)) {
+              throw "$label installed version $actual, which does not start with $expected."
+            }
+            Write-Host "Verified $label at $exe (version $actual)"
+            return $exe
+          }
+
+          $nsisRoots = @("$env:LOCALAPPDATA\$product", "$env:ProgramFiles\$product", "${env:ProgramFiles(x86)}\$product")
+          $msiRoots = @("$env:ProgramFiles\$product", "${env:ProgramFiles(x86)}\$product", "$env:LOCALAPPDATA\$product")
+
+          $p = Start-Process -FilePath $nsis.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "The NSIS install failed with exit code $($p.ExitCode)." }
+          $null = Assert-App 'NSIS' $nsisRoots
+          $uninstaller = $null
+          foreach ($root in $nsisRoots) {
+            if (-not (Test-Path $root)) { continue }
+            $uninstaller = Get-ChildItem -Path $root -Filter 'Uninstall*.exe' -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+            if ($uninstaller) { break }
+          }
+          if ($uninstaller) {
+            $u = Start-Process -FilePath $uninstaller.FullName -ArgumentList '/S' -Wait -PassThru
+            if ($u.ExitCode -ne 0) { throw "The NSIS uninstall failed with exit code $($u.ExitCode)." }
+          }
+
+          $p = Start-Process msiexec.exe -ArgumentList "/i `"$($msi.FullName)`" /qn /norestart" -Wait -PassThru
+          if ($p.ExitCode -notin @(0, 3010)) { throw "The MSI install failed with exit code $($p.ExitCode)." }
+          $null = Assert-App 'MSI' $msiRoots
+          $u = Start-Process msiexec.exe -ArgumentList "/x `"$($msi.FullName)`" /qn /norestart" -Wait -PassThru
+          if ($u.ExitCode -notin @(0, 3010)) { throw "The MSI uninstall failed with exit code $($u.ExitCode)." }
+
+      - name: Upload Windows installers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            src-tauri/target/**/bundle/nsis/*.exe
+            src-tauri/target/**/bundle/msi/*.msi
+          if-no-files-found: warn
+          retention-days: 7

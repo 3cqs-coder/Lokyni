@@ -1,0 +1,91 @@
+# Lokyni with an optional bundled Ollama, for self-hosting on a server, NAS, or homelab. On a laptop,
+# the desktop app or the installable web app is the simpler path; this is the networked/server one.
+#
+# Quick start:
+#   docker compose -f docker/docker-compose.yml up -d
+#   docker compose -f docker/docker-compose.yml exec ollama ollama pull llama3.2
+#   docker compose -f docker/docker-compose.yml exec ollama ollama pull bge-m3
+# Then open http://127.0.0.1:7887 and add your documents.
+
+services:
+  lokyni:
+    image: lokyni
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: lokyni
+    restart: unless-stopped
+    # No `init:` here — the image's ENTRYPOINT already runs tini as PID 1 (it reaps re-parented browser
+    # helpers and forwards signals), so a compose init would just wrap it in a second, redundant init.
+    stop_grace_period: 30s     # give in-flight indexing/answering time to finish and caches to flush
+    # --enforce-host-guard keeps the DNS-rebinding Host guard active even though the server binds
+    # 0.0.0.0 inside the container (required for the published port), so only loopback and any
+    # trustedHosts you configure are accepted.
+    # Point Lokyni at the bundled Ollama below. To use an Ollama you already run instead, delete the
+    # ollama service and its depends_on, then change --ollama-host to your host. On Docker Desktop
+    # (macOS/Windows) use http://host.docker.internal:11434; on Linux, add
+    # `extra_hosts: ["host.docker.internal:host-gateway"]` to this service or use the host's LAN IP.
+    # If you change --port below, also set the published port above AND add `environment:
+    # [HEALTHCHECK_PORT=<port>]` so the healthcheck probes the right port (it defaults to 7887 otherwise).
+    command: ["node", "/app/lokyni.js", "--port", "7887", "--bind", "0.0.0.0", "--enforce-host-guard", "--ollama-host", "http://ollama:11434"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      # Published to host LOOPBACK only, because the control plane (settings, file browsing, backups)
+      # is not password-protected. To reach Lokyni from other machines, put a reverse proxy with
+      # authentication in front of it (see the README's "Reverse Proxy Setup"), rather than changing
+      # this to 0.0.0.0.
+      - "127.0.0.1:7887:7887"
+    volumes:
+      # One named volume holds everything that must persist: config/config.json, the document index
+      # and workspaces (./data), and the downloaded reranker model. config/config.json is written on
+      # the first Settings save; until then Lokyni runs on its built-in defaults. The named volume is
+      # owned by the image's non-root user automatically. If you replace it with a HOST bind mount
+      # (e.g. ./state:/state), first make that host directory writable by uid 1000 — `chown -R 1000:1000
+      # ./state` — or the non-root process can't write the index and startup fails.
+      - lokyni-state:/state
+      # To index documents that live on the host, mount each folder read-only and then add it under
+      # Documents -> Indexed folders using its in-container path (for example /documents):
+      # - /path/on/host/Documents:/documents:ro
+    read_only: true            # the whole root filesystem is read-only; every write goes to the volume or tmpfs
+    tmpfs:
+      - /tmp                   # Chromium scratch and temp files (the app runs with --disable-dev-shm-usage)
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "node", "/app/docker/healthcheck.js"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+
+  # Optional bundled Ollama, so the stack answers with a fully local model out of the box and works
+  # offline. Delete this service (and Lokyni's depends_on above) if you run Ollama elsewhere. Ollama
+  # has no authentication, so its port is deliberately NOT published — only Lokyni reaches it over the
+  # internal network.
+  ollama:
+    image: ollama/ollama:0.22.1
+    container_name: lokyni-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    # GPU acceleration (NVIDIA): install the NVIDIA Container Toolkit on the host, then uncomment.
+    # This does not apply on macOS; without a GPU, Ollama runs on the CPU.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  lokyni-state:
+  ollama-models:

@@ -1,0 +1,2442 @@
+:root {
+  /* Tell the browser this theme is dark, so native controls it draws itself — the closed
+     <select>, its dropdown popup, the date-picker calendar, spin buttons, scrollbars — match
+     the app instead of following the OS color scheme. Redefined per theme below. */
+  color-scheme: dark;
+  --bg:         #0f0f0f;
+  --surface:    #171717;
+  --surface2:   #1f1f1f;
+  --border:     #2a2a2a;
+  --text:       #e2e2e2;
+  --text-dim:   #949494;  /* small secondary text; meets WCAG AA (>=4.5:1) on every dark surface, including the elevated/hover rows */
+  --text-mid:   #999;
+  --accent:     #4f8ef7;
+  /* The accent is also used AS text on this tint (active/hover states: .hdr-btn.active, the primary
+     confirm button, picker rows, the web-search "Yes" button, model-suggestion tags). At #1e3a6e that
+     was ~3.5:1 and failed AA; deepened so accent text on it clears 4.5:1. Its other uses put light
+     text on this tint, which a darker tint only helps. */
+  --accent-dim: #142545;
+  /* Solid-button background with white text. The bright --accent is reserved for text, borders, and
+     dots (it needs to stay light for contrast ON the dark surfaces); white text ON it is only ~3.2:1,
+     below AA. This deeper accent gives white text >=4.5:1 on buttons. In the light and sepia themes,
+     where the base accent is already dark enough for white text, this equals --accent. */
+  --accent-strong: #2563eb;
+  --user-bg:    #1a2d4a;
+  --user-text:  #cfe0ff;
+  --pill-bg:    #1e1e1e;
+  --pill-border:#333;
+  --pill-hover: #282828;   /* slightly deeper so accent text on a hovered pill clears AA (was #2a2a2a, ~4.46:1) */
+  --error:      #ff5f5f;
+  --error-strong: #dc2626;   /* solid destructive-button background: white text meets AA here (the bright --error is ~3.0:1) */
+  --error-tint: rgba(255, 95, 95, 0.1);   /* faint red wash for destructive-control hover, per theme */
+  --warn-bg:    #1a1200;
+  --warn-text:  #ffc94a;
+  --success-bg: #0a1f0a;
+  --success:    #4ade80;
+  --code-bg:    #111;
+  --bg-elev:    #262626;
+  /* Answer-bubble surface. Dark (this default theme) hides the usual lift — a shadow is near-invisible
+     on the near-black page and --edge-highlight is only 5% — so the bot bubble rises to the elevated gray
+     instead of reading as surface-on-bg. Light/sepia override it back to --surface, where a shadow and a
+     bright sheen do the lifting. Only .bot .bubble consumes it. */
+  --bubble:     var(--bg-elev);
+  /* Citation highlight in the document viewer. A dark amber band with light amber ink so
+     the highlighted passage stays readable on the dark page — an inherited light body
+     color over a translucent yellow used to go muddy. */
+  --cite-bg:    #4a3c12;
+  --cite-text:  #ffe6a3;
+  /* Radius scale — shared across the product family so corners read as one system. --radius is the
+     default control rung (10px), unchanged and now sourced from the scale; reading/card surfaces use
+     --radius-lg. The extra rungs are the shared vocabulary for tokenizing the remaining literals over
+     time (no sweeping rewrite here). */
+  --radius-sm:   8px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   16px;
+  --radius-pill: 999px;
+  --radius:      var(--radius-md);
+  /* Shared elevation + backdrop, so popovers and modal scrims don't each carry their own copy.
+     Black-based, so they read the same in every theme and need no per-theme override. A small ramp
+     (sm < md < lg < pop) gives resting surfaces a subtle, consistent lift without each rule inventing
+     its own shadow. Kept consistent across the product family so the surfaces read as siblings. */
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md:  0 2px 4px rgba(0, 0, 0, 0.08), 0 8px 20px -6px rgba(0, 0, 0, 0.18);
+  --shadow-lg:  0 6px 12px rgba(0, 0, 0, 0.10), 0 20px 44px -12px rgba(0, 0, 0, 0.26);
+  --shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --scrim:      rgba(0, 0, 0, 0.6);
+  /* A soft top sheen on raised surfaces — the one elevation token that is NOT theme-independent: a
+     bright white edge reads on light/sepia paper but would glare on a dark surface, so dark keeps it
+     barely-there. Paired with --shadow-sm/md on cards and the composer. */
+  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  /* System font stacks — no external font dependency */
+  --font-sans:  'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:  'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --panel-w:    360px;
+  /* Reading text-size multiplier (accessibility). 1 = default; the Settings "Text size" control sets it on
+     <html>, and an inline pre-paint script restores it before first paint (no flash). It scales the surfaces
+     people READ — chat answers/questions, the document viewer, and rendered Markdown — whose headings and code
+     are sized in em, so one multiplier cascades. The chrome keeps its fixed sizes, so layout never breaks.
+     Browser zoom (Ctrl/Cmd +/-) still scales everything on top of this. */
+  --read-scale: 1;
+}
+
+/* Light theme. The secondary greys are kept dark enough that small secondary text meets WCAG AA
+   (>=4.5:1) on every surface, including the elevated and hover rows, while staying clearly
+   secondary to the body color. On a light background an AA-compliant "dim" gray necessarily sits
+   close to the "mid" gray — contrast leaves little room below it. */
+.light {
+  color-scheme: light;
+  --bg:         #f0f0ee;
+  --surface:    #fafafa;
+  --surface2:   #efefef;
+  --border:     #ddd;
+  --text:       #1a1a1a;
+  --text-dim:   #646464;   /* darkened so small secondary text meets AA (>=4.5:1) on every light surface, including the hover rows */
+  --text-mid:   #666666;
+  /* Deepened one step so the accent meets WCAG AA as text/border on the darker interactive surfaces
+     (hover/active use --pill-hover / --bg-elev / --surface2), where #2563eb dipped to ~4.1:1. Still
+     clearly blue, and white button text on it only gains contrast. */
+  --accent:     #1d4ed8;
+  --accent-dim: #dbeafe;
+  --accent-strong: #1d4ed8;   /* white button text: ~6.7:1 */
+  --user-bg:    #2563eb;
+  --user-text:  #fff;
+  --pill-bg:    #f0f0f0;
+  --pill-border:#ddd;
+  --pill-hover: #e4e4e4;
+  --error:      #b81020;   /* error text meets AA on light surfaces incl. elevated rows; --error-strong stays the button bg */
+  --error-strong: #dc2626;    /* already dark enough for white button text (~5.2:1) */
+  --error-tint: rgba(220, 38, 38, 0.1);
+  --warn-bg:    #fffbeb;
+  --warn-text:  #92400e;
+  --success-bg: #f0fff0;
+  --success:    #116b2f;   /* darkened so success text (badges, statuses) meets AA on light surfaces */
+  --code-bg:    #f5f5f3;
+  --bg-elev:    #e6e6e6;
+  --bubble:     var(--surface);   /* light lifts the bubble by shadow + sheen, not surface color */
+  --cite-bg:    #fff1b8;
+  --cite-text:  #4a3a00;
+  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);  /* bright top sheen reads on light paper */
+}
+
+/* Sepia — warm, low-glare paper for long reading sessions. Not a tinted light
+   theme: the background is warm and desaturated, the ink is soft brown rather than
+   black, and the accent shifts warm too (a blue accent reads as broken here).
+   Every foreground/background pair meets WCAG AA — warm palettes compress contrast
+   easily, which is why most sepia themes end up hard to read. */
+.sepia {
+  /* Warm paper is a light scheme — native controls should render light, not dark. */
+  color-scheme: light;
+  --bg:         #f4ecd8;
+  --surface:    #faf4e4;
+  --surface2:   #ece2c9;
+  --border:     #d9cbaa;
+  --text:       #3d2f1f;
+  --text-dim:   #695944;   /* darkened so small secondary text meets AA (>=4.5:1) on every sepia surface, including the hover rows */
+  --text-mid:   #6b5842;
+  /* A warm brown ink, deepened so it meets WCAG AA (>= 4.5:1) as text/border not only on the page
+     background but also on the darker interactive surfaces it lands on (hover and active states use
+     --pill-hover / --bg-elev / --surface2 / --accent-dim); the previous #9a5b2c dipped to ~3.7:1
+     there. Deeper only raises contrast wherever the accent is used, including white text on the
+     filled button token. */
+  --accent:     #85481f;
+  --accent-dim: #e8d9bd;
+  --accent-strong: #85481f;   /* white button text: ~6.9:1 */
+  --user-bg:    #8b5a2b;
+  --user-text:  #fdf8ec;
+  --pill-bg:    #ece2c9;
+  --pill-border:#d9cbaa;
+  --pill-hover: #e2d6b8;
+  --error:      #a33228;
+  --error-strong: #a33228;    /* already dark enough for white button text (~6.9:1) */
+  --error-tint: rgba(163, 50, 40, 0.12);
+  --warn-bg:    #f7edd2;
+  --warn-text:  #8a5a12;
+  --success-bg: #eef0d8;
+  --success:    #456020;   /* darkened so success text meets AA on sepia surfaces */
+  --code-bg:    #efe6cf;
+  --bg-elev:    #e4d8ba;
+  --bubble:     var(--surface);   /* warm paper lifts the bubble by shadow + sheen, not surface color */
+  --cite-bg:    #ecdca0;
+  --cite-text:  #4a3818;
+  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.5);  /* warm paper takes a slightly softer sheen */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Accessibility helpers. .sr-only hides content visually while keeping it for screen readers; the
+   skip link stays off-screen until focused, then appears so a keyboard user can jump past the header
+   straight to the main content. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: 8px; top: -60px; z-index: 200;
+  background: var(--accent-strong); color: #fff; padding: 8px 14px; border-radius: 8px;
+  text-decoration: none; font-family: var(--font-sans); font-size: 14px;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: calc(8px + env(safe-area-inset-top, 0px)); }
+
+/* Respect a reduced-motion preference: cut the infinite spinners/pulses and long
+   transitions to near-instant so the UI stays fully functional without motion, for
+   users with vestibular sensitivity. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* A visible keyboard focus ring on every theme. Inputs remove the default outline and
+   rely on a border-color change; this covers buttons and links, whose default outline
+   can be hard to see on the dark theme. */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Text fields recolor their border on focus but suppress the global outline (their id/class selectors
+   outrank the rule above), leaving only a subtle 1px border change — a weaker cue than the 2px ring every
+   other control gets. Add the ring back on KEYBOARD focus via box-shadow, which does not affect layout so no
+   field shifts, for one consistent, clearly visible focus indicator across the app (WCAG 2.4.7). */
+#message-input:focus-visible,
+.settings-box input:not([type="checkbox"]):focus-visible,
+.settings-box select:focus-visible,
+.settings-box textarea:focus-visible,
+.prompt-modal .prompt-input:focus-visible,
+.help-search input:focus-visible,
+#url-ingest input:focus-visible,
+#doc-panel input:not([type="checkbox"]):not([type="file"]):focus-visible,
+#doc-panel textarea:focus-visible,
+#date-from:focus-visible, #date-to:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* Theme the scrollbars in Firefox too (WebKit is themed per-element below). */
+html { scrollbar-color: var(--pill-border) transparent; scrollbar-width: thin; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--text);
+  /* Use the DYNAMIC viewport height on mobile browsers. Plain 100vh is the LARGE viewport (address bar
+     retracted), so with the app as a fixed, overflow-hidden flex column the composer would sit below the
+     fold behind the browser's bottom toolbar and be unreachable. 100dvh tracks the visible area; the
+     100vh line is the fallback for browsers without dvh. */
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* ── Header ── */
+#header {
+  display: flex;
+  align-items: center;
+  /* Wrap to a second row rather than overflow when the buttons don't fit — a mid-width window,
+     tablet, or half-screen desktop otherwise pushed the last controls off-screen and forced a
+     horizontal page scrollbar. min-height (not a fixed height) lets it grow when wrapped; the
+     row-gap spaces the wrapped rows while the column-gap keeps the desktop single-row spacing. */
+  flex-wrap: wrap;
+  /* Respect the device safe areas so the installed PWA's header clears the status bar / notch
+     (the insets are 0 on desktop and non-notched screens, so this is inert there). */
+  padding: env(safe-area-inset-top, 0px) calc(18px + env(safe-area-inset-right, 0px)) 6px calc(18px + env(safe-area-inset-left, 0px));
+  min-height: calc(48px + env(safe-area-inset-top, 0px));
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  gap: 8px 12px;
+  z-index: 20;
+}
+#header .logo {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+/* The real brand mark (the same icon.svg the app and PWA use), so the in-app logo matches the
+   icon exactly and renders identically on every platform — unlike the old text glyph, which
+   each system font drew differently. It carries its own background, so it looks right on any theme. */
+#header .logo-mark { display: block; width: 20px; height: 20px; flex-shrink: 0; }
+
+/* Monochrome line icons (sprite in partials/icons.ejs, referenced via <svg class="ico"><use href="#ic-…">).
+   Sized to the surrounding text (1em) and stroked with currentColor, so an icon inherits the button's color
+   and accent/hover/active states, and renders identically across OSes and the dark/light/sepia themes —
+   where emoji glyphs vary and ignore the theme. `flex:none` keeps it from being squeezed in a flex button. */
+.ico {
+  width: 1em; height: 1em; flex: none;
+  display: inline-block; vertical-align: -0.14em;
+  fill: none; stroke: currentColor; stroke-width: 1.9;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.ico .ico-dot { fill: currentColor; stroke: none; }   /* filled dots (e.g. the "More" ellipsis) */
+#status-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-mid);
+  padding: 3px 9px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface2);
+  transition: all 0.3s;
+}
+#status-badge .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-dim); transition: background 0.3s;
+}
+#status-badge.ready .dot    { background: var(--success); }
+#status-badge.indexing .dot { background: var(--warn-text); animation: pulse 1s infinite; }
+#status-badge.error .dot    { background: var(--error); }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.hdr-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-mid);
+  font-size: 13px; padding: 5px 11px; border-radius: 8px; cursor: pointer;
+  font-family: var(--font-mono); white-space: nowrap;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.hdr-btn:hover  { border-color: var(--accent); color: var(--accent); }
+.hdr-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+#theme-toggle   { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; margin-left: auto; }
+
+/* Icon-only header buttons (Settings, theme) — quiet squares that de-emphasize secondary actions. */
+.hdr-btn.hdr-icon { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; }
+
+/* Shrunk, quiet active-model indicator. */
+.hdr-model { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px; white-space: nowrap; }
+
+/* Header overflow ("⋯ More") menu — the same reusable popover pattern as the composer Tools menu,
+   right-aligned so the secondary actions form one tidy cluster. */
+.hdr-menu-wrap { position: relative; display: inline-flex; margin-left: auto; }
+.hdr-menu-wrap ~ #theme-toggle { margin-left: 0; }
+#more-btn { position: relative; }
+.hdr-dot { position: absolute; top: 3px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
+.hdr-dot.hidden { display: none; }
+.hdr-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+  width: 264px; max-width: 86vw;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-pop); padding: 6px;
+  max-height: min(70vh, 480px); max-height: min(70dvh, 480px); overflow-y: auto;
+}
+.hdr-menu[hidden] { display: none; }
+/* A menu row carries display:flex, which would override the plain `hidden` attribute's display:none — so a
+   row toggled with [hidden] (the account rows) would still show. This higher-specificity rule restores it. */
+.menu-row[hidden] { display: none; }
+.menu-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: none; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px;
+  cursor: pointer; color: var(--text); font-family: var(--font-sans);
+  transition: background 0.12s, border-color 0.12s;
+}
+.menu-row:hover { background: var(--bg-elev); border-color: var(--border); }
+/* Keyboard focus keeps a visible, high-contrast ring (WCAG 2.4.11) — never suppressed to look like hover. */
+.menu-row:focus-visible { background: var(--bg-elev); border-color: var(--accent); outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.menu-ico { flex-shrink: 0; width: 26px; height: 26px; display: grid; place-items: center; font-size: 14px; border-radius: 7px; background: var(--surface2); }
+.menu-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.menu-txt b { font-size: 13px; font-weight: 600; }
+.menu-desc { font-size: 11px; color: var(--text-dim); }
+.menu-row .inbox-badge { margin-left: auto; }
+
+/* ── Layout ── */
+#main { flex: 1; display: flex; overflow: hidden; }
+#chat-col { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* ── Document panel ── */
+#doc-panel {
+  width: var(--panel-w);
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  display: flex; flex-direction: column; flex-shrink: 0;
+  /* visibility is transitioned with no delay when opening (so content appears at once) but with a
+     matching delay when collapsing (so it stays visible through the fade, then hides). */
+  transition: width 0.2s ease, opacity 0.2s ease, visibility 0s linear 0s;
+  overflow: hidden;
+}
+/* visibility:hidden (not just opacity/pointer-events) is what removes the collapsed panel's inputs
+   and buttons from the keyboard tab order and the accessibility tree — otherwise a keyboard or
+   screen-reader user tabs into a dozen invisible, off-screen controls. */
+#doc-panel.collapsed {
+  width: 0; opacity: 0; pointer-events: none; visibility: hidden;
+  transition: width 0.2s ease, opacity 0.2s ease, visibility 0s linear 0.2s;
+}
+
+/* Hidden on desktop (the app-header Documents toggle closes the panel there); the mobile block below shows it.
+   Scoped to #doc-panel-header so it outranks the .hdr-btn.hdr-icon display rule the button now also carries. */
+#doc-panel-header .doc-panel-close { display: none; }
+#doc-panel-header {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  /* A column: a title row, then a wrapping actions row. The drawer is a fixed 360px, so the seven controls
+     can't share one line — stacking the actions below the title lets them wrap by PANEL width and never clip. */
+  display: flex; flex-direction: column; gap: 10px;
+  flex-shrink: 0;
+}
+.doc-panel-titlerow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.doc-panel-titlebtns { display: flex; gap: 6px; flex-shrink: 0; }
+#doc-panel-header h2 {
+  font-size: 12px; font-family: var(--font-mono);
+  color: var(--text-mid); letter-spacing: 0.06em; text-transform: uppercase;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* The actions row wraps so nothing is clipped at the drawer edge; the format select takes the leading slot and
+   can grow, the buttons follow and flow onto a second line when they don't fit. */
+.doc-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.doc-panel-actions .hdr-select { flex: 1 1 120px; min-width: 110px; }
+.doc-panel-actions .hdr-btn { flex: 0 0 auto; }
+/* Comfortable-but-compact drawer-header controls (replaces per-control inline padding so the mobile media
+   query can enlarge them to a 24px tap target). The mobile block below grows these for touch. */
+#doc-panel-header .hdr-btn, #doc-panel-header .hdr-select { padding: 5px 9px; font-size: 12px; }
+#doc-panel-header .hdr-btn.hdr-icon { padding: 0; }
+
+/* Drop zone */
+#drop-zone {
+  margin: 10px 12px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+#drop-zone:hover, #drop-zone.drag-over { border-color: var(--accent); background: var(--accent-dim); }
+#drop-zone .dz-icon  { font-size: 22px; margin-bottom: 6px; }
+#drop-zone .dz-label { font-size: 12px; color: var(--text-mid); font-family: var(--font-mono); }
+#drop-zone .dz-sub   { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+#file-input { display: none; }
+
+/* Upload progress */
+#upload-progress { margin: 0 12px 8px; display: none; flex-direction: column; gap: 6px; }
+#upload-progress.visible { display: flex; }
+.upload-item {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 7px 10px;
+  font-size: 11px; font-family: var(--font-mono);
+}
+.upload-item .ui-name   { color: var(--text); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upload-item .ui-bar-wrap { background: var(--border); border-radius: 3px; height: 3px; overflow: hidden; }
+.upload-item .ui-bar    { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.1s; width: 0%; }
+.upload-item.done .ui-bar  { background: var(--success); width: 100%; }
+.upload-item.error .ui-bar { background: var(--error); }
+.upload-item .ui-status    { color: var(--text-dim); margin-top: 4px; }
+.upload-item.done  .ui-status { color: var(--success); }
+.upload-item.error .ui-status { color: var(--error); }
+
+/* Document list */
+#doc-list-wrap { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+#doc-list-wrap::-webkit-scrollbar       { width: 3px; }
+#doc-list-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+#doc-list-empty { text-align: center; color: var(--text-dim); font-size: 12px; font-family: var(--font-mono); padding: 24px 0; }
+
+.doc-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: 6px;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s; margin-bottom: 3px;
+}
+.doc-item:hover { background: var(--surface2); border-color: var(--border); }
+
+/* Nested-folder headers in the document list. */
+.doc-folder {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px; border-radius: 6px; margin-bottom: 3px;
+  cursor: pointer; -webkit-user-select: none; user-select: none;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+.doc-folder:hover { background: var(--surface2); border-color: var(--border); }
+.doc-folder .df-twisty { font-size: 10px; color: var(--text-dim); width: 12px; flex-shrink: 0; transition: transform 0.12s; background: none; border: none; padding: 0; cursor: pointer; line-height: 1; }
+.doc-folder.collapsed .df-twisty { transform: rotate(-90deg); }
+.doc-folder .df-icon { font-size: 13px; flex-shrink: 0; }
+.doc-folder .df-name {
+  flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono);
+}
+.doc-folder .df-count {
+  font-size: 9px; font-family: var(--font-mono); color: var(--text-dim);
+  background: var(--surface2); padding: 1px 6px; border-radius: 8px; flex-shrink: 0;
+}
+/* Theme the check color of every checkbox in the document panel (list rows and the small toggles),
+   so they match the accent in all themes instead of the OS default. */
+#doc-panel input[type="checkbox"] { accent-color: var(--accent); }
+.doc-folder .df-check { flex-shrink: 0; cursor: pointer; width: 13px; height: 13px; }
+.doc-item .di-icon { font-size: 14px; flex-shrink: 0; }
+.doc-item .di-info { flex: 1; min-width: 0; }
+.doc-item .di-name { display: block; font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); unicode-bidi: plaintext; }
+/* The filename opens the document. Keep it looking like the row's text (not a button) and reserve the
+   accent for hover/focus, so the row still reads as one compact file entry. */
+.doc-item .di-name.di-open { text-decoration: none; padding: 1px 0; }
+.doc-item .di-name.di-open:hover { color: var(--accent); text-decoration: underline; }
+.doc-item .di-name.di-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 3px; }
+.doc-item .di-meta { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+.doc-item .di-badge { font-size: 9px; font-family: var(--font-mono); padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+.doc-item .di-badge.indexed { background: var(--success-bg); color: var(--success); }
+.doc-item .di-badge.pending { background: var(--warn-bg); color: var(--warn-text); }
+.doc-item .di-del {
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 14px; padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
+  transition: color 0.15s, background 0.15s; line-height: 1;
+}
+.doc-item .di-del:hover { color: var(--error); background: var(--error-tint); }
+.doc-item .di-summarize {
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 13px; padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
+  transition: color 0.15s, background 0.15s; line-height: 1;
+}
+.doc-item .di-summarize:hover { color: var(--accent); background: var(--accent-dim); }
+.doc-item .di-summarize:disabled { opacity: 0.3; cursor: default; }
+.doc-item .di-check { flex-shrink: 0; cursor: pointer; accent-color: var(--accent); width: 13px; height: 13px; }
+.doc-item.selected { background: var(--surface2); border-color: var(--accent); }
+.doc-item { cursor: pointer; }
+
+#doc-filter-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px; margin-bottom: 4px;
+  background: var(--surface2); border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.doc-search {
+  flex: 1 1 100%; display: flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 5px;
+  padding: 0 6px; transition: border-color 0.15s;
+}
+.doc-search:focus-within { border-color: var(--accent); }
+.doc-search-ico { display: inline-flex; align-items: center; color: var(--text-dim); flex-shrink: 0; font-size: 12px; }
+#doc-search-input {
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  color: var(--text); font-family: var(--font-mono); font-size: 11px; padding: 5px 0;
+}
+#doc-search-input::placeholder { color: var(--text-dim); }
+/* One clear affordance on every browser: hide the WebKit-drawn cancel so the adjacent button is the
+   only one, and keep the same layout in Firefox (which draws none). */
+#doc-search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.doc-search-clear {
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 12px; line-height: 1; padding: 3px 4px; border-radius: 4px; flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.doc-search-clear:hover { color: var(--accent); background: var(--accent-dim); }
+#doc-search-clear[hidden] { display: none; }
+.doc-filter-status { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+#doc-filter-label { flex: 1 1 auto; min-width: 0; line-height: 1.3; font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+#doc-filter-label.focused { color: var(--accent); font-weight: 600; }
+#doc-filter-label.filtered { color: var(--text-mid); }
+#doc-select-all {
+  font-size: 10px; padding: 2px 7px; border-radius: 4px; cursor: pointer;
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  font-family: var(--font-mono); transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+#doc-select-all:hover { border-color: var(--accent); color: var(--accent); }
+#doc-select-all:disabled { opacity: 0.4; cursor: not-allowed; border-color: var(--border); color: var(--text-dim); }
+
+/* ── Chat area ── */
+#chat-box { flex: 1; overflow-y: auto; padding: 24px 0; display: flex; flex-direction: column; gap: 4px; }
+#chat-box::-webkit-scrollbar       { width: 4px; }
+#chat-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.msg-row { display: flex; padding: 2px 20px; animation: fadeIn 0.18s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+.msg-row.user      { justify-content: flex-end; }
+.msg-row.bot       { justify-content: flex-start; }
+.msg-row.error-row { justify-content: center; }
+/* A turn the user ended with Stop. Quiet and neutral — this is not an error. */
+.msg-row.notice-row { justify-content: center; padding-top: 0; }
+.notice-bubble {
+  font-family: var(--font-mono); font-size: calc(11px * var(--read-scale));
+  color: var(--text-dim); padding: 2px 10px; border-radius: 20px;
+  border: 1px dashed var(--border); unicode-bidi: plaintext;
+}
+
+/* unicode-bidi: plaintext gives each bubble its own direction from its content (like dir="auto"), so
+   a right-to-left answer or question (Arabic/Hebrew) aligns and orders correctly, in every bubble
+   (bot, user, restored) without per-node markup. */
+.bubble { max-width: 72%; padding: 10px 14px; border-radius: var(--radius-lg); line-height: 1.55; overflow-wrap: anywhere; unicode-bidi: plaintext; font-size: calc(14px * var(--read-scale)); }
+.user .bubble { background: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 3px; }
+.bot  .bubble { background: var(--bubble, var(--surface)); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 3px; box-shadow: var(--edge-highlight), var(--shadow-sm); }
+/* The generating-status bubble is focused programmatically (tabindex=-1) only to anchor a keyboard user's
+   focus for the screen-reader announcement while the composer is disabled — it is not a tabbable control,
+   so it must not paint the global accent focus ring, which showed as a thick blue border around the answer. */
+.bot .bubble:focus, .bot .bubble:focus-visible { outline: none; }
+
+.bot .bubble h1,.bot .bubble h2,.bot .bubble h3 { color: var(--text); margin: 0.9em 0 0.4em; }
+.bot .bubble h1 { font-size: 1.15em; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.bot .bubble h2 { font-size: 1.05em; }
+.bot .bubble h3 { font-size: 0.95em; color: var(--text-mid); }
+.bot .bubble p  { margin: 0.6em 0; }
+.bot .bubble p:first-child { margin-top: 0; }
+.bot .bubble p:last-child  { margin-bottom: 0; }
+.bot .bubble ul,.bot .bubble ol { margin: 0.5em 0 0.5em 1.2em; }
+.bot .bubble li { margin: 0.25em 0; }
+.bot .bubble code { font-family: var(--font-mono); font-size: 0.85em; background: var(--surface2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px; }
+/* Code blocks used a hardcoded near-black with !important, which rendered as a dark
+   slab in the light and sepia themes. --code-bg lets each theme pick a sensible
+   surface while keeping the strong contrast that makes code readable. */
+.bot .bubble pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; overflow-x: auto; margin: 0.7em 0; }
+.bot .bubble pre code { background: none; border: none; padding: 0; font-size: calc(12px * var(--read-scale)); }
+.bot .bubble blockquote { border-left: 3px solid var(--accent); margin: 0.6em 0; padding-left: 12px; color: var(--text-mid); }
+/* Underline links at rest, not only on hover: accent vs body text is under 3:1 in every theme, so
+   color alone can't distinguish a link (WCAG 1.4.1, colorblind and mouse-free users). */
+.bot .bubble a { color: var(--accent); text-decoration: underline; }
+.bot .bubble strong { color: var(--text); }
+/* display:block + overflow-x lets a wide many-column table scroll WITHIN the bubble instead of
+   pushing the page into horizontal scroll on a narrow phone (mirrors the code-block treatment). */
+.bot .bubble table { border-collapse: collapse; width: 100%; margin: 0.6em 0; font-size: calc(13px * var(--read-scale)); display: block; max-width: 100%; overflow-x: auto; }
+.bot .bubble th,.bot .bubble td { border: 1px solid var(--border); padding: 6px 10px; }
+.bot .bubble th { background: var(--surface2); }
+
+.streaming::after { content:'▋'; color: var(--accent); animation: blink 0.7s step-start infinite; margin-left: 1px; }
+.retrying { min-width: 40px; min-height: 20px; }
+.retrying::after { content:''; display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.thinking { min-width: 48px; min-height: 24px; display: flex; align-items: center; gap: 4px; padding: 12px 16px !important; }
+.thinking::before, .thinking::after { display: none; }
+.thinking span { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); animation: thinking-dot 1.2s ease-in-out infinite; }
+.thinking span:nth-child(2) { animation-delay: 0.2s; }
+.thinking span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes thinking-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
+@keyframes blink { 50%{opacity:0} }
+
+.error-bubble { background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-text); border-radius: var(--radius-lg); padding: 8px 14px; font-size: 13px; font-family: var(--font-mono); }
+
+/* Sources */
+.sources-row { display: flex; padding: 4px 20px 6px; gap: 6px; flex-wrap: wrap; animation: fadeIn 0.2s ease; }
+.sources-label { font-family: var(--font-mono); font-size: calc(10px * var(--read-scale)); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; align-self: center; white-space: nowrap; }
+.sources-sub { opacity: 0.85; }
+.source-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--pill-bg); border: 1px solid var(--pill-border);
+  border-radius: 20px; padding: 3px 10px 3px 8px;
+  font-size: calc(12px * var(--read-scale)); font-family: var(--font-mono); color: var(--text-mid);
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+  max-width: 260px; overflow: hidden; text-overflow: ellipsis;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.source-pill:hover { background: var(--pill-hover); border-color: var(--accent); color: var(--accent); }
+/* The filename is the one flexible item: it shrinks and ellipsizes so the fixed trailing badges (the
+   match-strength dot, the credibility label, the passage-location tag) are never clipped by the pill's
+   max-width. Without this the row overflows and overflow:hidden cuts the last badge off at the edge. */
+.source-pill .pill-name { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-pill .pill-icon { font-size: calc(11px * var(--read-scale)); flex-shrink: 0; }
+.source-pill .pill-num  { font-size: calc(10px * var(--read-scale)); background: var(--border); border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.source-pill .pill-loc  { font-size: calc(9px * var(--read-scale)); color: var(--text-dim); font-family: var(--font-mono); background: var(--surface2); border-radius: 3px; padding: 1px 4px; flex-shrink: 0; }
+/* Advisory credibility labels (preprint / retraction / concern). Neutral by default, with a warning tone only
+   for the two integrity flags; never the sole signal (the label text is always present). */
+.source-pill .pill-cred {
+  font-size: calc(9px * var(--read-scale)); color: var(--text-dim); font-family: var(--font-mono);
+  text-transform: uppercase; background: var(--surface2); border-radius: 3px; padding: 1px 4px; flex-shrink: 0;
+}
+.source-pill .pill-cred-retraction,
+.source-pill .pill-cred-concern { color: var(--warn-text); }
+.src-preview-cred { color: var(--text-dim); }
+/* Retrieval-confidence indicator on a source pill: how strongly that document matched. Shape and fill
+   differ per level — filled circle (strong) / filled square (moderate) / hollow ring (weak) — so it does
+   not rely on color alone and stays legible for colorblind users (WCAG 1.4.1). The full label lives in
+   the title/aria-label for screen readers and hover. */
+.source-pill .pill-conf { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; box-sizing: border-box; }
+.source-pill .pill-conf.conf-high   { background: var(--success); }
+.source-pill .pill-conf.conf-medium { background: var(--warn-text); border-radius: 1px; }
+.source-pill .pill-conf.conf-low    { background: transparent; border: 1.5px solid var(--error); }
+
+/* ── Citation preview card (hover/focus) ── */
+.src-preview {
+  position: fixed; z-index: 90; width: 320px; max-width: 86vw;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-pop); padding: 10px 12px; pointer-events: auto;
+}
+.src-preview.hidden { display: none; }
+.src-preview-title { font-size: calc(12px * var(--read-scale)); font-weight: 600; color: var(--text); margin-bottom: 3px; overflow-wrap: anywhere; }
+.src-preview-meta { display: flex; align-items: center; gap: 8px; font-size: calc(10px * var(--read-scale)); color: var(--text-dim); font-family: var(--font-mono); margin-bottom: 6px; flex-wrap: wrap; }
+/* Confidence is a colored dot + label (the same vocabulary as the source pills), so there is no
+   small text on a saturated fill to fail contrast in any theme. The label stays in the readable
+   meta color; only the dot carries the color. */
+.src-preview-conf { display: inline-flex; align-items: center; gap: 4px; color: var(--text-dim); }
+.src-preview-conf::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+.src-preview-conf.conf-high::before   { background: var(--success); }
+.src-preview-conf.conf-medium::before { background: var(--warn-text); }
+.src-preview-conf.conf-low::before    { background: var(--error); }
+/* Credibility tier of a web source — a small dot + label, reusing the meta row. A transparent structural
+   hint, not a truth judgment, so the colors are gentle: official/established lean positive, forum/social
+   neutral-muted. All via theme tokens so they read correctly in light, dark, and sepia. */
+.src-preview-tier { display: inline-flex; align-items: center; gap: 4px; color: var(--text-dim); }
+.src-preview-tier::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+.src-preview-tier.tier-official::before  { background: var(--success); }
+.src-preview-tier.tier-trusted::before   { background: var(--accent); }
+/* Community is shown HOLLOW (outline, not filled) so it is distinguishable from the filled official/trusted
+   dots by shape, not only color — robust in sepia where the brown tokens are close in hue. */
+.src-preview-tier.tier-community::before { background: transparent; border: 1px solid var(--text-dim); }
+.src-preview-snip { font-size: calc(12px * var(--read-scale)); line-height: 1.5; color: var(--text-mid); max-height: 7.5em; overflow: hidden; }
+.src-preview-empty { color: var(--text-dim); font-style: italic; }
+.src-preview-hint { margin-top: 6px; font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); }
+
+/* ── Cropped figure thumbnails ── */
+.fig-btn {
+  font-size: 10px; font-family: var(--font-mono);
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 10px; padding: 2px 8px; cursor: pointer; flex-shrink: 0;
+}
+.fig-btn:hover { border-color: var(--accent); color: var(--accent); }
+.figures-panel {
+  flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 10px;
+  margin-top: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface2);
+}
+.figures-panel.hidden { display: none; }
+.figure-thumb { margin: 0; width: 160px; max-width: 100%; }
+.figure-thumb a { display: block; }
+.figure-thumb img {
+  width: 100%; height: 120px; object-fit: contain;
+  /* Intentional literal white (not a theme token): cropped charts and figures assume a white
+     paper background, so their transparent margins must matte to white in every theme rather
+     than show a dark or sepia surface through them. */
+  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+}
+.figure-thumb figcaption { font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Date filter (rendered as a sub-panel inside the composer Tools menu) ── */
+#date-filter-inputs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 8px 4px 40px; }
+#date-filter-inputs.hidden { display: none; }
+#date-filter-inputs label { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); display: flex; align-items: center; gap: 4px; }
+#date-filter-inputs input[type="date"] { font-family: var(--font-mono); font-size: 11px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 5px; padding: 3px 6px; }
+#date-filter-clear { background: none; border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; font-size: 11px; font-family: var(--font-mono); padding: 2px 8px; border-radius: 5px; }
+#date-filter-clear:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Input */
+#input-area { border-top: 1px solid var(--border); background: var(--surface); padding: 12px 16px; flex-shrink: 0; }
+#input-form { display: flex; gap: 8px; align-items: flex-end; max-width: 900px; margin: 0 auto; }
+#message-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); font-family: var(--font-sans);
+  font-size: 14px; padding: 10px 14px; resize: none; outline: none;
+  min-height: 42px; max-height: 140px; overflow-y: auto; line-height: 1.5;
+  box-shadow: var(--edge-highlight), var(--shadow-sm);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+/* Mouse/programmatic focus: recolor the border and lift with the elevation shadow. Scoped to :not(:focus-visible)
+   so it does NOT overwrite the keyboard focus ring defined below (same-specificity source order would otherwise
+   let this win and defeat the 2px accent ring the field is required to show — WCAG 2.4.7). */
+#message-input:focus:not(:focus-visible) { border-color: var(--accent); box-shadow: var(--edge-highlight), var(--shadow-md); }
+/* Keyboard focus: the 2px accent ring (painted first, so it reads on top) PLUS the same lift, so the composer
+   both shows the required ring and stays elevated. Its own rule (after the shared :focus-visible block) wins for
+   this field without adding the elevation to every other field. */
+#message-input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), var(--edge-highlight), var(--shadow-md); }
+#message-input::placeholder { color: var(--text-dim); }
+#message-input:disabled { opacity: 0.5; }
+#send-button {
+  background: var(--accent-strong); border: none; border-radius: var(--radius); color: #fff;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+  padding: 10px 18px; cursor: pointer; height: 42px; white-space: nowrap;
+  box-shadow: var(--edge-highlight), var(--shadow-sm);
+  transition: opacity 0.15s; flex-shrink: 0;
+}
+#send-button:hover:not(:disabled) { opacity: 0.85; }
+#send-button:disabled { opacity: 0.4; cursor: not-allowed; }
+/* The same control becomes Stop while a turn is in flight. Stopping generation is not destructive (nothing is
+   lost), so it uses a calm, neutral tone rather than an alarming red — a bordered surface button that stays
+   clearly clickable and reads correctly on every theme. */
+#send-button.stop-mode { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+#send-button.stop-mode:hover:not(:disabled) { opacity: 0.85; }
+#send-button.stop-mode:disabled { opacity: 0.65; cursor: progress; }
+.hint { font-size: 11px; color: var(--text-dim); margin-top: 6px; text-align: center; font-family: var(--font-mono); }
+
+/* Empty state */
+#empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-dim); pointer-events: none; -webkit-user-select: none; user-select: none; }
+/* Center every child on the same axis. The onboarding and ask states are block containers, so centering
+   only the outer flex item left the icon/title flush left while the sublabel and pills were centered. */
+#empty-state > div { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; text-align: center; }
+#empty-state .icon  { font-size: 36px; opacity: 0.4; }
+#empty-state .label { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; }
+#empty-add-doc {
+  pointer-events: auto; margin-top: 10px; min-height: 36px; padding: 8px 16px;
+  font-family: var(--font-sans); font-size: 13px;
+}
+/* One-line reassurance of the core promise, kept quiet and readable (not mono) and wrapped to a sane width
+   so it reads as a sentence, not a label, and fits a phone. */
+#empty-state .sublabel { max-width: 32ch; text-align: center; font-size: 12px; line-height: 1.5; color: var(--text-dim); padding: 0 16px; }
+/* Starter prompts: the empty state disables pointer events, so re-enable them just on the pills. */
+.starter-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; max-width: 520px; padding: 0 12px; pointer-events: auto; }
+.starter-pill {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text-mid);
+  font-size: 12px; border-radius: 999px; padding: 6px 14px; cursor: pointer; -webkit-user-select: none; user-select: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.starter-pill:hover { border-color: var(--accent); color: var(--accent); }
+/* Keep the shared focus-visible outline (don't suppress it) so keyboard focus is unmistakable, not
+   conveyed by color alone. */
+.starter-pill:focus-visible { border-color: var(--accent); color: var(--accent); }
+
+/* Delete confirm */
+.del-confirm { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; z-index: 220; animation: fadeIn 0.15s; }
+.del-confirm-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; max-width: 340px; width: 90%; max-height: 90dvh; overflow: auto; }
+.del-confirm-box h3 { font-size: 14px; margin-bottom: 8px; }
+.del-confirm-box p  { font-size: 12px; color: var(--text-mid); margin-bottom: 16px; font-family: var(--font-mono); word-break: break-all; }
+/* Prompt-modal message reads as a sentence, so let it wrap on words (not break-all like the
+   document-name paragraph above), and give the text input a themed, full-width field. */
+.prompt-modal p { word-break: normal; }
+.prompt-modal .prompt-input {
+  width: 100%; box-sizing: border-box; margin-bottom: 16px;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--surface2); color: var(--text); font-size: 13px;
+}
+.prompt-modal .prompt-input:focus { outline: none; border-color: var(--accent); }
+.del-confirm-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.del-confirm-btns button { padding: 7px 16px; border-radius: 7px; border: 1px solid var(--border); cursor: pointer; font-size: 13px; }
+.del-btn-cancel { background: var(--surface2); color: var(--text); }
+.del-btn-ok     { background: var(--error-strong); color: #fff; border-color: var(--error-strong); }
+/* Neutral primary for a benign confirm (create, rename) — accent, not destructive red. */
+.del-btn-primary { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.del-btn-primary:hover { background: var(--accent); color: var(--bg); }
+/* Message-modal (generic confirm/alert) prose: wrap on words like the prompt modal, and keep multi-line
+   messages readable — the base .del-confirm-box p is mono + break-all for file paths, not sentences. */
+.msg-modal p { font-family: inherit; word-break: normal; white-space: pre-line; }
+/* The delete dialog's reassurance line is a sentence, not a file path, so it reads as prose (the base
+   .del-confirm-box p is mono + break-all for the file name it sits under). */
+.del-confirm-note { font-family: inherit !important; word-break: normal !important; color: var(--text-mid); font-size: 12px; }
+
+/* ── Toasts — non-blocking, themed notifications (replace native alert()) ──
+   Fixed near the bottom, centered, above the modals so a toast raised from inside a dialog is still
+   seen. Honors the mobile safe-area and never causes horizontal overflow. */
+.toast-wrap {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  z-index: 300; width: max-content; max-width: min(92vw, 480px); pointer-events: none;
+}
+.toast {
+  pointer-events: auto; cursor: pointer;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: 9px; padding: 10px 14px; font-size: 13px; line-height: 1.4;
+  max-width: 100%; word-break: break-word; white-space: pre-line;
+  box-shadow: 0 6px 24px var(--scrim); animation: toastIn 0.16s ease-out;
+}
+.toast-glyph { margin-right: 8px; font-weight: 700; }   /* status by more than color (see .toast kind) */
+.toast-error   { border-left-color: var(--error-strong); }
+.toast-error   .toast-glyph { color: var(--error-strong); }
+.toast-success { border-left-color: var(--accent-strong, var(--accent)); }
+.toast-success .toast-glyph { color: var(--accent-strong, var(--accent)); }
+.toast-info    .toast-glyph { color: var(--accent); }
+.toast-out { animation: toastOut 0.2s ease-in forwards; }
+@keyframes toastIn  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } .toast-out { animation: none; opacity: 0; } }
+/* On a phone the composer is pinned to the bottom; lift the toasts above it so they never sit over the
+   input/send controls. (The wrapper is pointer-events:none regardless, so controls stay operable.) */
+@media (max-width: 640px) { .toast-wrap { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); } }
+
+/* ── Document viewer ──
+   These rules previously hardcoded dark hex values, so the viewer stayed dark
+   regardless of the chosen theme. Once a theme class was applied to the page, the
+   themed elements and these unthemed ones disagreed — producing a mix of palettes.
+   Everything here now reads the same variables as the rest of the app. */
+.viewer-body { font-family: var(--font-sans); background: var(--bg); color: var(--text); height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+.viewer-toolbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; flex-shrink: 0; }
+.viewer-toolbar h1 { font-size: 14px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.viewer-meta { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.viewer-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text-mid); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; text-decoration: none; white-space: nowrap; }
+.viewer-btn:hover { background: var(--pill-hover); color: var(--text); }
+.viewer-content { max-width: 860px; margin: 0 auto; padding: 32px 24px; width: 100%; flex: 1; min-height: 0; overflow-y: auto; }
+.viewer-body pre { white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: calc(13px * var(--read-scale)); line-height: 1.6; color: var(--text); unicode-bidi: plaintext; }
+/* Fill the space the (sticky) toolbar leaves, whatever its height — the toolbar wraps to more than one
+   row on a narrow phone, so a fixed height subtraction would push the last row below the fold. flex:1 in
+   the column layout does this without assuming a toolbar height; min-height:0 lets it shrink to fit. */
+.viewer-body iframe { flex: 1; min-height: 0; border: none; width: 100%; }
+/* Render each paragraph in its own base direction so an RTL-language document (Arabic, Hebrew)
+   reads correctly in the in-app viewer, mirroring the chat bubble. */
+.markdown { font-size: calc(15px * var(--read-scale)); line-height: 1.7; unicode-bidi: plaintext; }
+.markdown h1,.markdown h2,.markdown h3 { color: var(--text); margin: 1.5em 0 0.5em; }
+.markdown h1 { font-size: 1.6em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+.markdown h2 { font-size: 1.3em; }
+.markdown h3 { font-size: 1.1em; }
+.markdown p  { margin: 0.8em 0; }
+.markdown ul,.markdown ol { margin: 0.8em 0 0.8em 1.5em; }
+.markdown li { margin: 0.3em 0; }
+.markdown code { background: var(--surface2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); font-size: 0.9em; overflow-wrap: anywhere; }
+.markdown pre  { background: var(--surface2); border: 1px solid var(--border); padding: 16px; border-radius: 6px; margin: 1em 0; overflow-x: auto; }
+.markdown blockquote { border-left: 3px solid var(--border); margin: 1em 0; padding-left: 1em; color: var(--text-mid); }
+/* Underlined so a prose link is identifiable without relying on hue (WCAG 1.4.1): accent vs body
+   text is below 3:1 in every theme, and the Guide/document viewer render link-heavy Markdown. */
+.markdown a    { color: var(--accent); text-decoration: underline; overflow-wrap: anywhere; }
+.markdown strong { color: var(--text); }
+.markdown table { border-collapse: collapse; width: 100%; margin: 1em 0; display: block; max-width: 100%; overflow-x: auto; }
+.markdown th,.markdown td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+.markdown th   { background: var(--surface2); }
+
+/* ── Modals (confirm + settings) ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: var(--scrim);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+}
+.modal-overlay.hidden { display: none; }
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px 28px 22px;
+  min-width: 340px; max-width: 480px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column; gap: 14px;
+  /* Cap every modal to the visible viewport and let it scroll internally, so a tall dialog on a short or
+     landscape screen (e.g. the folder picker with several volume chips and a long path) can never push its
+     action buttons off-screen with no way to reach them. dvh tracks the mobile visible viewport; the vh line
+     is the fallback. Modals that set their own max-height (settings, the source viewer) override this. */
+  max-height: 92vh; max-height: 92dvh; overflow-y: auto;
+}
+/* dvh tracks the visible viewport on mobile (the address bar/toolbar shrink it); the vh line is the
+   fallback for older engines. A modal capped at plain vh can otherwise run under the mobile toolbar. */
+.settings-box { max-width: 680px; max-height: 85vh; max-height: 85dvh; overflow: hidden; }
+/* Keep the title, save status, and action buttons in view; only the settings body scrolls. */
+#settings-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 2px; }
+.settings-box > .modal-title,
+.settings-box > #settings-status,
+.settings-box > .modal-btns { flex: 0 0 auto; }
+/* In-app source viewer: a large modal that holds either a same-origin document iframe or a
+   clean text reader for a web result. */
+.source-modal { max-width: 960px; width: 92%; height: 88vh; height: 88dvh; max-height: 88vh; max-height: 88dvh; padding: 14px 16px 16px; }
+.source-head-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+/* A long web-page title or filename must truncate, not push the actions off-screen (esp. on a
+   narrow phone). Needs min-width:0 to override the flex item's default min-content width. */
+.source-modal .picker-head { gap: 12px; }
+.source-modal #source-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-open-original {
+  font-family: var(--font-mono); font-size: 12px; color: var(--accent);
+  text-decoration: none; white-space: nowrap;
+}
+.source-open-original:hover { text-decoration: underline; }
+.source-open-original.hidden { display: none; }
+.source-frame {
+  flex: 1; width: 100%; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface2); min-height: 0;
+}
+.source-frame.hidden, .source-reader.hidden { display: none; }
+.source-reader {
+  flex: 1; overflow-y: auto; min-height: 0; padding: 4px 4px 0;
+  color: var(--text); font-size: 14px; line-height: 1.6;
+}
+.source-reader .sr-host { color: var(--text-dim); font-size: 12px; font-family: var(--font-mono); margin-bottom: 12px; }
+.source-reader .sr-body { white-space: pre-wrap; word-break: break-word; }
+.source-reader .sr-empty { color: var(--text-dim); font-style: italic; }
+/* A cited figure/table crop shown in the in-app overlay: fit the width, keep the aspect ratio. */
+.source-reader .sr-figure { text-align: center; }
+.source-reader .sr-figure img { max-width: 100%; height: auto; border-radius: 6px; }
+/* When the document viewer is embedded in the in-app source overlay, hide its own toolbar so
+   the overlay's header is the only chrome. */
+.viewer-body.embed .viewer-toolbar { display: none; }
+/* The PDF open/download link stays visible even in embed mode (which hides the toolbar) — it is the
+   only way to reach the file on iOS, where an inline <iframe> PDF renders blank. */
+.viewer-pdf-actions { padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--bg); text-align: center; }
+.viewer-pdf-actions .viewer-btn { display: inline-block; }
+.modal-title {
+  font-family: var(--font-mono); font-size: 14px; font-weight: 600;
+  color: var(--text); letter-spacing: 0.02em;
+}
+.modal-body { font-size: 13px; color: var(--text-mid); line-height: 1.5; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+/* Per-answer "Read as…" modal: a compact native select plus a hint, so the long language catalog is
+   browsable with the operating system's own picker instead of a custom scrolling list. */
+.readas-body { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.readas-body label { font-size: 12px; color: var(--text-dim); }
+.readas-body select {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--surface2); color: var(--text); font-size: 13px;
+}
+.readas-body .settings-hint { margin: 0; }
+/* Citation export/import modals: a compact form (select, file input, or pasted text). */
+.cite-body { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.cite-body label { font-size: 12px; color: var(--text-dim); }
+.cite-body select, .cite-body input[type="file"], .cite-body textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--surface2); color: var(--text); font-size: 13px;
+  font-family: var(--font-sans); box-sizing: border-box;
+}
+.cite-body textarea { font-family: var(--font-mono); resize: vertical; min-height: 90px; }
+.cite-body .settings-hint { margin: 0; }
+.modal-btn-cancel {
+  background: none; border: 1px solid var(--border); color: var(--text-mid);
+  padding: 7px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  font-family: var(--font-sans); transition: border-color 0.2s, color 0.2s;
+}
+.modal-btn-cancel:hover { border-color: var(--text-mid); color: var(--text); }
+.modal-btn-ok {
+  background: var(--accent-strong); border: none; color: #fff;
+  padding: 7px 18px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  font-family: var(--font-sans); font-weight: 500; transition: opacity 0.2s;
+}
+.modal-btn-ok:hover { opacity: 0.85; }
+
+/* Settings form */
+.settings-section {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 6px 0 2px; border-bottom: 1px solid var(--border); margin-top: 6px;
+}
+/* A light sub-heading INSIDE a settings section (e.g. grouping the recall boosters), dimmer than a
+   full .settings-section divider so it reads as a group label, not a new section. Theme-correct. */
+.settings-section-note {
+  font-size: 11px; color: var(--text-dim); font-style: italic;
+  margin: 10px 0 2px;
+}
+.settings-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 4px 0;
+}
+.settings-row label {
+  font-size: 13px; color: var(--text-mid); min-width: 160px; flex-shrink: 0;
+}
+/* Rows that hold a fill-input (text / number / select / secret field) get a FIXED label
+   column so every input starts at the same x. With the default content-width label the
+   input left-edge stair-stepped down the panel as labels varied in length. A long label
+   (hint and all) now wraps within the column and the row top-aligns, so the label meets
+   the first line of its input. Checkbox rows are intentionally excluded — their labels
+   carry a full one-line hint sentence and keep the box pinned right instead (below). */
+/* The .settings-row-input class mirrors the :has() selectors below for browsers without :has()
+   (e.g. Firefox < 121): a one-time script tags each fill-input row with it on load (see chat.js),
+   so the fixed label column and top-alignment apply there too. On :has()-capable browsers both match
+   the same rule, which is harmless. Checkbox rows carry no class — they keep the default inline layout. */
+.settings-row.settings-row-input > label,
+.settings-row:has(> input:not([type="checkbox"])) > label,
+.settings-row:has(> select) > label,
+.settings-row:has(> .settings-input-stack) > label,
+.settings-row:has(> .secret-field) > label {
+  flex: 0 0 190px; width: 190px; align-self: flex-start; padding-top: 7px;
+}
+.settings-row.settings-row-input,
+.settings-row:has(> input:not([type="checkbox"])),
+.settings-row:has(> select),
+.settings-row:has(> .settings-input-stack),
+.settings-row:has(> .secret-field) { align-items: flex-start; }
+.settings-row input, .settings-row select {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 6px 10px; border-radius: 7px; font-size: 13px;
+  font-family: var(--font-sans); outline: none; min-width: 0;
+  transition: border-color 0.2s;
+}
+.settings-row input:focus, .settings-row select:focus { border-color: var(--accent); }
+/* A checkbox is a boolean toggle, not a fill-the-row input: undo the text-input styling
+   the rule above hands it (flex-grow, padding, surface background/border) and pin it to a
+   consistent right-hand column with margin-left:auto. Without this each checkbox floats
+   immediately after its own label, so a stack of feature toggles lines up ragged — the
+   column edge shifting with every label's length. Now they align in one clean column no
+   matter how long each label (hint text included) runs. */
+/* A CHECKBOX row's label carries a full hint sentence, so it must be allowed to GROW and WRAP. The base
+   label is a non-shrinking 160px min-width column (for fill-input alignment); on a checkbox row that keeps a
+   long hint at its content width, which pushes the box off the row and makes the whole dialog scroll
+   horizontally. Here the label fills the row and wraps, and the box stays pinned right (margin-left:auto below).
+   .settings-row-check is the JS-tagged fallback for browsers without :has() (Firefox < 121). */
+.settings-row.settings-row-check > label,
+.settings-row:has(> input[type="checkbox"]) > label {
+  flex: 1 1 auto; min-width: 0;
+}
+.settings-row > input[type="checkbox"] {
+  flex: 0 0 auto; width: 16px; height: 16px;
+  margin: 0 0 0 auto; padding: 0;
+  background: none; border: none;
+  accent-color: var(--accent); cursor: pointer;
+}
+/* A vertical stack of inputs sharing one label column (e.g. a model dropdown with a
+   "or type a name" text field beneath it). Takes the same flexing space a single
+   input would, so it aligns with other rows' inputs. The row is top-aligned when it
+   contains a stack, so the label lines up with the FIRST input rather than floating
+   in the gap between the two. */
+.settings-row.settings-row-stacked,
+.settings-row:has(.settings-input-stack) { align-items: flex-start; }
+.settings-row.settings-row-stacked > label,
+.settings-row:has(.settings-input-stack) > label { padding-top: 7px; }
+.settings-input-stack { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.settings-input-stack input, .settings-input-stack select { width: 100%; }
+.settings-row.hidden { display: none; }
+/* Settings filter: a sticky search field. Matching rows/sections are shown; nonmatching ones get a separate
+   class, so the filter never disturbs the feature-visibility .hidden state underneath. The row carries 4px of
+   inner padding on the top and sides so the 2px focus ring (a box-shadow outside the input) is painted inside
+   the row instead of being clipped by #settings-body's scroll edges. */
+.settings-search-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 4px 4px 8px; position: sticky; top: 0; z-index: 2; background: var(--surface);
+}
+.settings-search-row input {
+  flex: 1 1 200px; min-width: 0; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 6px 10px; border-radius: 7px; font-size: 13px;
+  font-family: var(--font-sans); outline: none;
+}
+.settings-search-row input:focus { border-color: var(--accent); }
+#settings-filter-count { white-space: nowrap; }
+.settings-row.settings-filtered,
+.settings-section.settings-filtered,
+details.settings-filtered { display: none; }
+/* Read-only latest watchdog sweep. The same bounded-list treatment as the voice diagnostics panel. */
+.health-list {
+  max-height: 260px; overflow-y: auto; overscroll-behavior: contain; margin-top: 8px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface2);
+}
+.health-list:empty { display: none; }
+.health-row {
+  display: grid; grid-template-columns: minmax(90px, 150px) 1fr; gap: 8px;
+  padding: 6px 9px; border-top: 1px solid var(--border); font-size: 12px; line-height: 1.4;
+}
+.health-row:first-child { border-top: none; }
+.health-check {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.06em; overflow-wrap: anywhere;
+}
+.health-detail { color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .health-row { grid-template-columns: 1fr; gap: 2px; }
+  .settings-search-row input { flex-basis: 100%; }
+  #settings-filter-count { width: 100%; }
+}
+/* Collapsible "Advanced" group — hides tuning knobs a new user never needs behind one
+   click. The summary is styled to read like a .settings-section header, with a
+   disclosure caret in place of the default marker. Native <details>, no JS. */
+.settings-collapsible { margin-top: 6px; }
+.settings-collapsible > summary {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 6px 0 2px; border-bottom: 1px solid var(--border); margin-top: 6px;
+  cursor: pointer; list-style: none; -webkit-user-select: none; user-select: none;
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.settings-collapsible > summary::-webkit-details-marker { display: none; }
+.settings-collapsible > summary::before {
+  content: '▸'; color: var(--text-dim); font-size: 9px; line-height: 1;
+}
+.settings-collapsible[open] > summary::before { content: '▾'; }
+.settings-collapsible > summary .settings-hint { text-transform: none; letter-spacing: 0; }
+/* First sub-section inside Advanced doesn't need its own top gap under the summary. */
+.settings-collapsible > .settings-section:first-of-type { margin-top: 2px; }
+#settings-status {
+  font-size: 12px; padding: 4px 0; min-height: 18px;
+  color: var(--success); font-family: var(--font-mono);
+}
+#settings-status.error { color: var(--error); }
+
+/* ── Citation highlight in document viewer ── */
+.cite-highlight {
+  background: var(--cite-bg);
+  color: var(--cite-text);
+  border-radius: 3px;
+  padding: 1px 2px;
+  box-shadow: 0 0 0 2px var(--cite-bg);
+  scroll-margin-top: 80px;
+}
+.viewer-cite-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.viewer-cite-note {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-mid);
+  font-size: 12px;
+  padding: 8px 16px;
+}
+.pill-loc { cursor: pointer; }
+
+/* ── Composer Tools menu, mode rows, and active chips ── */
+/* Master-switch hiding: a mode row is removed entirely when its feature is disabled in Settings
+   (applyWebSearchVisibility / applySuggestVisibility toggle .hidden on the row's button). */
+#web-search-toggle.hidden, #suggest-toggle.hidden { display: none; }
+/* The web-search toggle locks on via long-press on touch. iOS Safari otherwise raises the text-selection
+   callout on a long-press and fires pointercancel, which aborts the long-press timer so the lock never
+   engages; and double-tap is the zoom gesture. Suppressing the callout/selection keeps the long-press alive,
+   and touch-action: manipulation disables double-tap zoom on the control (so taps stay clean). */
+#web-search-toggle {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -webkit-user-select: none; user-select: none;
+  touch-action: manipulation;
+}
+.source-pill.web-source .pill-icon { font-size: 11px; }
+.source-pill.web-source:hover { border-color: var(--accent); }
+
+.tools-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.tools-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--border); color: var(--text-mid);
+  font-family: var(--font-mono); font-size: 12px; height: 42px; padding: 0 12px;
+  border-radius: var(--radius); cursor: pointer; white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.tools-btn:hover, .tools-btn.open { border-color: var(--accent); color: var(--accent); }
+.tools-btn .tools-ico { font-size: 13px; }
+.tools-badge {
+  min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px;
+  background: var(--accent-strong); color: #fff; font-size: 10px; line-height: 17px;
+  text-align: center; font-family: var(--font-mono);
+}
+.tools-badge.hidden { display: none; }
+
+.tools-menu {
+  position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 40;
+  width: 340px; max-width: min(88vw, 360px);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-pop); padding: 6px;
+  /* Never clip the top rows on a short window — scroll within the menu instead. */
+  max-height: min(70vh, 540px); max-height: min(70dvh, 540px); overflow-y: auto;
+}
+.tools-menu[hidden] { display: none; }
+/* Mobile bottom-sheet chrome, shared by any panel that opts into the sheet presentation. Hidden on
+   desktop, where the same panel stays a compact popover with no backdrop. */
+.sheet-head { display: none; }
+.sheet-backdrop { position: fixed; inset: 0; background: var(--scrim); z-index: 79; }
+.sheet-backdrop[hidden] { display: none; }
+@media (min-width: 641px) { .sheet-backdrop { display: none; } }
+.tools-menu-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-dim); font-family: var(--font-mono); padding: 8px 10px 4px;
+}
+.tool-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: none; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px;
+  cursor: pointer; color: var(--text); transition: background 0.12s, border-color 0.12s;
+}
+.tool-row:hover { background: var(--bg-elev); border-color: var(--border); }
+/* Keyboard focus keeps a visible, high-contrast ring (WCAG 2.4.11) — never suppressed to look like hover. */
+.tool-row:focus-visible { background: var(--bg-elev); border-color: var(--accent); outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.tool-row.hidden { display: none; }
+.tool-ico { flex-shrink: 0; width: 26px; height: 26px; display: grid; place-items: center; font-size: 15px; border-radius: 7px; background: var(--surface2); }
+.tool-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tool-txt b { font-size: 13px; font-weight: 600; }
+.tool-desc { font-size: 11px; color: var(--text-dim); line-height: 1.35; }
+.tool-check { flex-shrink: 0; width: 18px; height: 18px; border: 1.5px solid var(--border); border-radius: 5px; display: grid; place-items: center; color: #fff; }
+.tool-row.active .tool-ico { background: var(--accent-dim); }
+.tool-row.active .tool-check { background: var(--accent-strong); border-color: var(--accent-strong); }
+.tool-row.active .tool-check::after { content: '✓'; font-size: 12px; line-height: 1; }
+.tool-row.locked .tool-check { background: var(--accent); border-color: var(--accent); }
+.tool-row.locked .tool-check::after { content: '🔒'; font-size: 10px; }
+
+/* Active answer options shown as removable chips above the input. */
+.tool-chips { display: flex; flex-wrap: wrap; gap: 6px; max-width: 900px; margin: 0 auto 8px; }
+.tool-chips.hidden { display: none; }
+.tool-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  /* Readable body text on the tinted background (accent-on-tint fails AA at this small size); the
+     accent border and tint still mark it as active. */
+  background: var(--accent-dim); border: 1px solid var(--accent); color: var(--text);
+  font-family: var(--font-mono); font-size: 11px; padding: 3px 6px 3px 9px; border-radius: 999px;
+}
+.tool-chip-x {
+  /* 24px hit area (WCAG 2.5.8) with a smaller glyph centered in it, so removing a chip is an easy
+     target on both pointer and touch. */
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: none; border: none; color: var(--text); cursor: pointer; font-size: 14px; line-height: 1;
+}
+.tool-chip-x:hover { background: var(--accent); color: var(--bg); }
+
+/* ── Web search offer (ask-first) ── */
+.bubble.web-offer { display: flex; flex-direction: column; gap: 10px; }
+.web-offer-actions { display: flex; gap: 8px; }
+.web-offer-btn {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.web-offer-btn.yes { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.web-offer-btn.yes:hover { background: var(--accent); color: var(--bg); }
+.web-offer-btn.no { background: none; color: var(--text-dim); }
+.web-offer-btn.no:hover { border-color: var(--text-dim); color: var(--text); }
+.web-offer-dismissed { font-size: 12px; color: var(--text-dim); font-style: italic; }
+
+/* ── Settings hint text ── */
+.settings-hint { font-size: 11px; color: var(--text-dim); font-weight: normal; }
+/* A bold sub-heading label for the grouped tools in the Settings "Tools & data" section. One class so
+   the weight can't drift the way eight repeated inline styles did. */
+.settings-subhead { font-weight: 600; }
+
+/* ── Indexed source folders ── */
+.settings-row-full { flex-direction: column; align-items: stretch; gap: 6px; }
+/* Multi-select language grid (OCR). Native checkboxes in labels keep the list keyboard- and
+   screen-reader-native; the grid reflows to one or two columns on a phone. */
+.settings-language-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; }
+.settings-language { display: flex; align-items: center; gap: 6px; min-height: 24px; font-size: 12px; color: var(--text-mid); cursor: pointer; }
+/* These are <label>s inside a .settings-row, so the generic .settings-row label rule would force a
+   160px minimum and prevent them from fitting the grid column. Keep them content-sized. */
+#cfg-ocr-languages .settings-language { min-width: 0; flex-shrink: 1; }
+.settings-language input { accent-color: var(--accent); margin: 0; }
+.settings-language.base { color: var(--text-dim); cursor: default; }
+#ocr-languages-note { font-size: 11px; color: var(--text-dim); margin: 0; }
+#source-list { display: flex; flex-direction: column; gap: 4px; }
+/* Two rows: the full path on top (wrapping rather than truncating, so a long
+   path is always readable), controls beneath it. A single flex row forced the
+   path into an ellipsis and stretched the "subfolders" label away from its own
+   checkbox, which read as a column heading instead of a label. */
+/* One line per folder: enable toggle, path, then the controls grouped tightly at
+   the right. The path wraps if it must (so it's never truncated) but the row stays
+   a single visual line for typical paths. */
+.source-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px;
+  font-size: 12px; font-family: var(--font-mono);
+}
+.source-item > input[type="checkbox"] { flex: 0 0 auto; margin: 0; }
+.source-path {
+  flex: 1 1 auto; min-width: 0;
+  overflow-wrap: anywhere; word-break: break-word; white-space: normal;
+  line-height: 1.35;
+}
+/* Controls never stretch — this is what kept pushing "subfolders" away from its
+   own checkbox when they shared a stretching flex row. */
+.source-controls { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.source-del {
+  flex: 0 0 auto;
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 12px; padding: 0 2px;
+}
+.source-del:hover { color: var(--accent); }
+/* Add row: the path input takes the full width on its own line so a long path is
+   readable while typing; the controls sit beneath it, each label tight to its own
+   checkbox. */
+.source-add { display: flex; align-items: center; gap: 8px; }
+.source-add input[type="text"] { flex: 1 1 auto; min-width: 0; }
+#source-browse-btn, #source-add-btn { flex: 0 0 auto; }
+.source-rec {
+  display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
+  font-size: 11px; color: var(--text-dim); white-space: nowrap; cursor: pointer;
+  -webkit-user-select: none; user-select: none;
+}
+.source-rec input[type="checkbox"] { margin: 0; }
+#source-add-btn {
+  font-size: 11px; font-family: var(--font-mono);
+  border: 1px solid var(--border); background: none; color: var(--text-dim);
+  border-radius: 5px; padding: 4px 10px; cursor: pointer;
+}
+#source-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Folder picker ── */
+.picker-modal { max-width: 560px; }
+.picker-head { display: flex; align-items: center; justify-content: space-between; }
+.picker-x {
+  /* 24px hit area (WCAG 2.5.8) for these modal dismiss controls, with the glyph centered. */
+  background: none; border: none; color: var(--text-dim);
+  font-size: 15px; cursor: pointer; line-height: 1;
+  min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center;
+}
+.picker-x:hover { color: var(--text); }
+.picker-current {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 5px;
+  margin-bottom: 8px;
+  /* Wrap rather than truncate — knowing exactly which folder you're in matters
+     more than keeping the box to one line. */
+  overflow-wrap: anywhere; word-break: break-all; white-space: normal; line-height: 1.4;
+}
+.picker-list {
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 320px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: 5px; padding: 4px;
+}
+.picker-item {
+  text-align: left; background: none; border: none; cursor: pointer;
+  color: var(--text); font-size: 12px; font-family: var(--font-mono);
+  padding: 5px 8px; border-radius: 4px;
+}
+.picker-item:hover { background: var(--accent-dim); color: var(--accent); }
+.picker-up { color: var(--text-dim); }
+.picker-empty { font-size: 12px; color: var(--text-dim); padding: 8px; font-style: italic; }
+.picker-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.picker-actions button {
+  font-size: 12px; font-family: var(--font-mono); cursor: pointer;
+  border: 1px solid var(--border); background: none; color: var(--text-dim);
+  border-radius: 5px; padding: 5px 12px;
+}
+.picker-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.picker-actions .picker-primary { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.picker-actions .picker-primary:hover { background: var(--accent); color: var(--bg); }
+/* The same primary-action treatment anywhere it is used, not only inside the picker footer. */
+.picker-primary {
+  border: 1px solid var(--accent); color: var(--accent); background: var(--accent-dim);
+  border-radius: 7px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+  font-family: var(--font-sans); transition: background 0.15s, color 0.15s;
+}
+.picker-primary:hover { background: var(--accent); color: var(--bg); }
+#source-browse-btn {
+  font-size: 11px; font-family: var(--font-mono); white-space: nowrap;
+  border: 1px solid var(--border); background: none; color: var(--text-dim);
+  border-radius: 5px; padding: 4px 10px; cursor: pointer;
+}
+#source-browse-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Source folder row controls ── */
+.source-off { opacity: 0.45; }
+.source-off .source-path { text-decoration: line-through; }
+/* Keep the label glued to its own checkbox — gap is tight and the pair never
+   stretches, so it reads as one control. */
+.source-flag-toggle {
+  display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
+  font-size: 10px; color: var(--text-dim); white-space: nowrap; cursor: pointer;
+  -webkit-user-select: none; user-select: none;
+}
+.source-flag-toggle input[type="checkbox"] { margin: 0; }
+.source-count { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+
+/* ── Log viewer ── */
+.logs-modal { max-width: 900px; width: 92%; }
+
+/* ── In-app guide (README viewer + search) ── */
+.help-modal { width: min(900px, 94vw); max-width: 94vw; height: min(88vh, 900px); height: min(88dvh, 900px); display: flex; flex-direction: column; overflow: hidden; }
+.help-search { display: flex; align-items: center; gap: 8px; padding: 10px 0 12px; flex-shrink: 0; }
+.help-search input {
+  flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--surface2); color: var(--text); font-size: 13px;
+}
+.help-search input:focus { outline: none; border-color: var(--accent); }
+.help-count { font-size: 12px; font-family: var(--font-mono); color: var(--text-dim); min-width: 62px; text-align: right; }
+.help-nav {
+  border: 1px solid var(--border); background: none; color: var(--text-mid);
+  border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px; line-height: 1;
+}
+.help-nav:hover { border-color: var(--accent); color: var(--accent); }
+.help-matches { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-bottom: 10px; flex-shrink: 0; }
+.help-matches:empty { display: none; }
+.help-matches-label { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+.help-chip {
+  font-size: 11px; padding: 3px 9px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface2); color: var(--text-mid); cursor: pointer; max-width: 260px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.help-chip:hover { border-color: var(--accent); color: var(--accent); }
+.help-body { flex: 1; overflow-y: auto; overflow-x: auto; padding: 4px 4px 8px; border-top: 1px solid var(--border); }
+.help-body mark.help-hit { background: var(--accent-dim); color: inherit; border-radius: 2px; padding: 0 1px; }
+.help-body mark.help-hit-active { background: var(--accent-strong); color: #fff; }
+/* Horizontally scrollable code/tables are focusable; keep a visible ring when reached by keyboard. */
+.help-body pre:focus-visible, .help-body table:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.logs-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 6px; }
+/* The three view tabs are grouped in a role="tablist"; it lays them out as a row so the surrounding
+   controls (auto-refresh, Copy, Refresh) keep flowing after the group exactly as before. */
+.logs-tablist { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 6px; }
+.logs-tab {
+  font-size: 11px; font-family: var(--font-mono); cursor: pointer;
+  border: 1px solid var(--border); background: none; color: var(--text-dim);
+  border-radius: 5px; padding: 4px 12px;
+}
+.logs-tab:hover { border-color: var(--accent); color: var(--accent); }
+.logs-tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.logs-auto {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: auto;
+  font-size: 11px; color: var(--text-dim); cursor: pointer; -webkit-user-select: none; user-select: none;
+}
+.logs-auto input[type="checkbox"] { margin: 0; }
+.logs-refresh {
+  font-size: 11px; font-family: var(--font-mono); cursor: pointer;
+  border: 1px solid var(--border); background: none; color: var(--text-dim);
+  border-radius: 5px; padding: 4px 12px;
+}
+.logs-refresh:hover { border-color: var(--accent); color: var(--accent); }
+.logs-meta {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);
+  overflow-wrap: anywhere; word-break: break-all;
+}
+.logs-body {
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.5;
+  color: var(--text-mid); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 10px; margin: 0;
+  /* dvh tracks the mobile visible viewport (the address bar shrinks it); the vh line is the fallback, matching
+     every other viewport-height value in this file. A plain vh here would run under the mobile toolbar. */
+  height: 55vh; height: 55dvh; overflow: auto;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.index-error-bar {
+  display: flex; align-items: center; gap: 10px;
+  margin: 8px 0; padding: 8px 12px;
+  border: 1px solid var(--border); border-left: 3px solid var(--error);
+  border-radius: 6px; font-size: 12px; color: var(--text-mid);
+}
+.index-error-bar span { flex: 1; overflow-wrap: anywhere; }
+.index-error-link {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; white-space: nowrap;
+}
+.index-error-link:hover { border-color: var(--accent); color: var(--accent); }
+.index-error-x { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px; }
+
+/* ── Picker volume shortcuts ── */
+.picker-volumes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.picker-vol {
+  font-family: var(--font-mono); font-size: 11px; cursor: pointer;
+  border: 1px solid var(--border); background: none; color: var(--text-dim);
+  border-radius: 5px; padding: 4px 10px; white-space: nowrap;
+}
+.picker-vol:hover { border-color: var(--accent); color: var(--accent); }
+.picker-vol.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* ── Workspace selector ── */
+.hdr-select {
+  font-family: var(--font-mono); font-size: 11px;
+  background: var(--surface2); color: var(--text-mid);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 3px 8px; cursor: pointer; max-width: 180px;
+}
+.hdr-select:hover { border-color: var(--accent); color: var(--accent); }
+.hdr-select:disabled { opacity: 0.5; cursor: wait; }
+
+/* ── Secret fields (API keys) ── */
+.secret-field { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.secret-field input { flex: 1; min-width: 0; }
+.secret-clear {
+  font-size: 10px; font-family: var(--font-mono); white-space: nowrap;
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 5px; padding: 3px 8px; cursor: pointer;
+}
+.secret-clear:hover { border-color: var(--error); color: var(--error); }
+
+/* ── Indexed folders in the Documents panel ── */
+.doc-panel-ws { font-size: 11px; color: var(--text-dim); font-weight: normal; }
+.doc-sources {
+  border-top: 1px solid var(--border);
+  padding: 8px 12px 12px;
+  flex-shrink: 0;
+  max-height: 45%;
+  overflow-y: auto;
+}
+.doc-sources > summary {
+  cursor: pointer; font-size: 11px; font-family: var(--font-mono);
+  color: var(--text-mid); padding: 4px 0; -webkit-user-select: none; user-select: none;
+}
+.doc-sources > summary:hover { color: var(--accent); }
+.doc-sources-hint { color: var(--text-dim); font-size: 10px; }
+.doc-sources-body { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+/* The panel is narrower than the settings modal, so the add row stacks instead of
+   sitting on one line — a path input, Browse, a checkbox and Add won't fit at 360px. */
+.doc-sources .source-add { flex-wrap: wrap; }
+.doc-sources .source-add input[type="text"] { flex: 1 1 100%; }
+
+/* ── Workspace persona ── */
+#persona-text {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 60px;
+  font-family: inherit; font-size: 13px; line-height: 1.4;
+  /* Theme it explicitly (it lives in the doc panel, not the settings box), so it follows the
+     app's dark/light/sepia theme instead of falling back to the OS color scheme. */
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 8px;
+}
+
+/* ── Backup & restore ── */
+.backup-check {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 11px; color: var(--text-dim); cursor: pointer; line-height: 1.4;
+}
+.backup-check input[type="checkbox"] { margin: 2px 0 0 0; flex-shrink: 0; }
+.backup-btn {
+  font-size: 11px; font-family: var(--font-mono);
+  border: 1px solid var(--border); background: none; color: var(--text-mid);
+  border-radius: 5px; padding: 5px 10px; cursor: pointer;
+}
+.backup-btn:hover { border-color: var(--accent); color: var(--accent); }
+.backup-sep {
+  font-size: 10px; font-family: var(--font-mono); color: var(--text-dim);
+  border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px;
+}
+#restore-file { font-size: 11px; color: var(--text-dim); }
+
+/* ── Backup messages ──
+   Legible at a glance: failures are the thing the user has to read and act on, so
+   they get normal body size and a color that stands out, not the 10px hint style. */
+.backup-msg {
+  font-size: 12px; line-height: 1.45; color: var(--text-mid);
+  overflow-wrap: anywhere;
+}
+.backup-msg.is-error {
+  color: var(--error);
+  border-left: 2px solid var(--error);
+  padding-left: 8px;
+}
+.backup-msg.is-ok { color: var(--success); }
+#backup-passphrase, #restore-passphrase, #restore-file { width: 100%; }
+
+/* ── Indexing phase of an upload ──
+   The transfer bar completing doesn't mean the document is searchable yet, so the
+   progress area stays up with an indeterminate bar until indexing settles. */
+.upload-item.indexing .ui-name { color: var(--accent); }
+.ui-bar.indeterminate {
+  width: 35%;
+  animation: ui-indeterminate 1.1s ease-in-out infinite;
+}
+@keyframes ui-indeterminate {
+  0%   { margin-left: 0;    width: 20%; }
+  50%  { margin-left: 40%;  width: 45%; }
+  100% { margin-left: 100%; width: 15%; }
+}
+
+/* ── OCR settings ── */
+.settings-explain {
+  font-size: 11px; line-height: 1.5; color: var(--text-dim);
+  margin: 0; padding: 6px 0;
+}
+/* Both OCR row groups hide the same way. The vision-model field is a subset of the
+   OCR rows, so it needs its own rule — a shared `.hidden` on the element isn't
+   enough when the base rule is scoped to .cfg-ocr-row. */
+.cfg-ocr-row.hidden,
+.cfg-ocr-vision-row.hidden,
+.cfg-ocr-tess-row.hidden { display: none; }
+#cfg-ocr-engine { min-width: 260px; }
+#cfg-ocr-max-pages { width: 90px; }
+
+#cfg-ocr-workers { min-width: 260px; }
+
+/* ── Per-answer action pills (Read aloud) and the "⋯ More" overflow menu ──
+   Read aloud stays inline as a pill; Copy, Download and "Why this answer?" live inside the overflow menu so the
+   action row stays uncluttered. The pill shape is shared; the menu is a small dropdown anchored to its button. */
+.readaloud-btn, .answer-menu-btn {
+  font-size: 10px; font-family: var(--font-mono);
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 10px; padding: 2px 8px; cursor: pointer; margin-left: 6px;
+}
+.readaloud-btn:hover, .answer-menu-btn:hover { border-color: var(--accent); color: var(--accent); }
+.answer-menu { position: relative; display: inline-block; }
+.answer-menu-list {
+  position: absolute; z-index: 30; left: 0; top: calc(100% + 4px);
+  display: flex; flex-direction: column; min-width: 170px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-pop);
+}
+.answer-menu-list[hidden] { display: none; }
+/* Flip the dropdown above the button when there isn't room below (the newest answer sits just above the
+   composer, so downward would be clipped). Toggled by the open handler after measuring available space. */
+.answer-menu.drop-up .answer-menu-list { top: auto; bottom: calc(100% + 4px); }
+.answer-menu-item {
+  font-size: 11px; font-family: var(--font-mono); text-align: left; white-space: nowrap;
+  background: none; border: none; color: var(--text); border-radius: 6px; padding: 6px 8px; cursor: pointer;
+}
+.answer-menu-item:hover { background: var(--bg-elev); color: var(--accent); }
+/* Read-aloud / Play-as-podcast: a loading pill while synthesizing, an accented "Stop" pill while playing. */
+.readaloud-btn.loading { opacity: 0.7; }
+.readaloud-btn.playing { border-color: var(--accent); color: var(--accent); }
+/* Shown in place of the podcast player when the voice engine is off — a quiet one-line hint. */
+.podcast-hint { font-size: 10px; font-family: var(--font-mono); color: var(--text-dim); margin-left: 6px; }
+/* Settings voice pickers with an inline preview button. */
+.voice-pick { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+/* A row that holds one or more voice dropdowns. On a wide panel the picker takes the remaining
+   width beside its label; the selects share it and wrap when they run out of room. On a phone the
+   row stacks (see the mobile block) so neither the second host nor its preview button is clipped. */
+.settings-row-voices { flex-wrap: wrap; }
+.settings-row-voices > .voice-pick { flex: 1 1 260px; width: auto; }
+/* A select plus its preview button. Pairs share the picker row and wrap onto separate lines when
+   narrow; each pair keeps the select and its button together so the button is never orphaned. */
+.voice-pair { display: inline-flex; align-items: center; gap: 6px; flex: 1 1 180px; min-width: 0; }
+.voice-pair select { flex: 1 1 120px; min-width: 0; }
+/* A labelled field groups a caption with its select (and preview button). The system-voice row uses two of
+   these and stacks its long label above them, so neither the label nor its status is ever clipped. */
+.voice-field { display: flex; flex-direction: column; gap: 3px; flex: 1 1 180px; min-width: 0; }
+.voice-field-label {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.voice-field .voice-pair { flex: 1 1 auto; }
+.settings-row.settings-row-voices-stacked { align-items: stretch; row-gap: 6px; }
+.settings-row.settings-row-voices-stacked > label { flex: 1 1 100%; width: auto; min-width: 0; padding-top: 0; }
+.settings-row.settings-row-voices-stacked > .voice-pick { flex: 1 1 100%; width: 100%; }
+.settings-row.settings-row-voices-stacked > .voice-status-block { flex: 1 1 100%; margin: 0; min-height: 14px; }
+.voice-preview.unavailable { opacity: 0.45; }
+.voice-preview.unavailable:hover { color: var(--text-dim); border-color: var(--border); }
+.voice-preview {
+  background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-dim);
+  cursor: pointer; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 15px; flex: none; transition: color 0.15s, border-color 0.15s;
+}
+.voice-preview:hover { color: var(--accent); border-color: var(--accent); }
+.voice-preview.loading { opacity: 0.6; }
+.voice-preview.playing { color: var(--accent); border-color: var(--accent); }
+/* Read-only voice diagnostics: one bounded, scrollable list so a machine with many voices stays compact.
+   Overscroll stays inside the list on touch devices, and an empty list (before the catalog arrives) draws
+   no empty box. */
+.tts-voices-list {
+  max-height: 280px; overflow-y: auto; overscroll-behavior: contain; margin-top: 8px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface2);
+}
+.tts-voices-list:empty { display: none; }
+.tts-voice-row {
+  display: grid; grid-template-columns: minmax(90px, 150px) 1fr; gap: 8px;
+  padding: 5px 9px; border-top: 1px solid var(--border);
+  font-size: 12px; line-height: 1.4;
+}
+.tts-voice-row:first-child { border-top: none; }
+.tts-voice-lang { color: var(--text); }
+.tts-voice-detail { color: var(--text-dim); min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .tts-voice-row { grid-template-columns: 1fr; gap: 2px; }
+}
+/* "model ready / downloads on first use" status beside a voice toggle in Settings. */
+.voice-status { margin-left: 8px; font-size: 11px; font-family: var(--font-mono); color: var(--text-dim); }
+/* ── Extraction Tables modal ── */
+/* `.hidden` is scoped per element in this file (there is no global display:none rule), so the
+   extraction containers and action buttons declare their own. */
+#extract-setup.hidden, #extract-run.hidden, #extract-cancel.hidden, #extract-export.hidden, #extract-run-btn.hidden { display: none; }
+.extract-modal { max-width: 920px; width: 94%; }
+.extract-columns { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.extract-col-row { display: flex; gap: 8px; align-items: center; }
+.extract-col-input {
+  flex: 1; min-width: 0; padding: 7px 10px; font-size: 13px; color: var(--text);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+}
+.extract-col-rm {
+  flex: 0 0 auto; width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface2); color: var(--text-dim); cursor: pointer; font-size: 12px;
+}
+.extract-col-rm:hover { color: var(--text); }
+.extract-addcol {
+  align-self: flex-start; margin-bottom: 10px; padding: 5px 10px; font-size: 12px;
+  background: none; border: 1px dashed var(--border); border-radius: 6px; color: var(--text-mid); cursor: pointer;
+}
+.extract-addcol:hover { color: var(--text); border-color: var(--accent); }
+.extract-scope { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-mid); margin: 4px 0 2px; }
+.extract-progress { font-size: 12px; color: var(--text-mid); margin-bottom: 8px; min-height: 16px; }
+.extract-table-wrap { max-height: 56vh; max-height: 56dvh; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+.extract-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.extract-table th, .extract-table td {
+  border: 1px solid var(--border); padding: 6px 9px; text-align: left; vertical-align: top;
+  max-width: 320px; overflow-wrap: anywhere;
+}
+.extract-table thead th { position: sticky; top: 0; background: var(--surface2); color: var(--text); font-weight: 600; z-index: 1; }
+.extract-table td.ex-doc, .extract-table th.ex-doc { font-family: var(--font-mono); color: var(--text-mid); max-width: 220px; }
+.extract-table td.ex-empty { color: var(--text-dim); text-align: center; }
+.extract-table td.ex-has-evidence { cursor: help; border-bottom: 1px dotted var(--accent); }
+/* ── Notes modal ── */
+#note-delete.hidden, #note-title.hidden { display: none; }
+.notes-modal { max-width: 920px; width: 95%; }
+.notes-body { display: flex; gap: 14px; height: 68vh; height: 68dvh; }
+.notes-sidebar { flex: 0 0 240px; display: flex; flex-direction: column; gap: 8px; min-width: 0; border-right: 1px solid var(--border); padding-right: 12px; }
+.notes-new { padding: 7px 10px; font-size: 13px; background: none; border: 1px dashed var(--border); border-radius: 6px; color: var(--text-mid); cursor: pointer; }
+.notes-new:hover { color: var(--text); border-color: var(--accent); }
+.notes-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.notes-empty { color: var(--text-dim); font-size: 12px; padding: 8px 4px; }
+.notes-item { text-align: left; background: none; border: 1px solid transparent; border-radius: 6px; padding: 7px 9px; cursor: pointer; color: var(--text); }
+.notes-item:hover { background: var(--surface2); border-color: var(--border); }
+.notes-item.active { border-color: var(--accent); background: var(--surface2); }
+.notes-item-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes-item-excerpt { font-size: 11px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes-editor { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.note-title { padding: 8px 10px; font-size: 14px; font-weight: 600; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.note-title:disabled { color: var(--text-mid); background: var(--surface2); }
+.note-body { flex: 1; resize: none; padding: 10px; font-size: 13px; line-height: 1.5; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); }
+.notes-actions { display: flex; align-items: center; gap: 10px; }
+.note-related { min-height: 8px; }
+.note-related-head { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; }
+.note-related-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.note-related-pill { font-size: 11px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-mid); }
+@media (max-width: 640px) {
+  .notes-body { flex-direction: column; height: 74vh; height: 74dvh; }
+  .notes-sidebar { flex: 0 0 auto; max-height: 30%; border-right: none; border-bottom: 1px solid var(--border); padding-right: 0; padding-bottom: 10px; }
+}
+
+/* ── Corpus mind-map modal ── */
+.mindmap-modal { max-width: 1040px; width: 96%; }
+.mindmap-body { position: relative; height: 68vh; height: 68dvh; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--bg); }
+/* touch-action:none so a drag/pinch pans the map instead of scrolling the page — same on mouse, touch, and pen. */
+.mindmap-svg { width: 100%; height: 100%; display: block; touch-action: none; }
+.mindmap-svg.pannable { cursor: grab; }
+.mindmap-svg.panning { cursor: grabbing; }
+.mindmap-status {
+  position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; text-align: center; padding: 0 32px; color: var(--text-mid); font-size: 13px; line-height: 1.5;
+}
+.mindmap-status .mm-status-text { max-width: 30em; }
+.mm-status-btn {
+  padding: 8px 16px; background: var(--accent-strong); color: #fff; border: none; border-radius: 6px;
+  cursor: pointer; font-size: 13px;
+}
+.mm-status-btn:hover { filter: brightness(1.08); }
+/* Zoom controls, pinned to the canvas corner. */
+.mm-controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 2; }
+.mm-ctrl {
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1;
+  background: var(--bg-elev); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+}
+.mm-ctrl:hover { border-color: var(--text-mid); }
+.mm-edge { stroke: var(--border); stroke-width: 1; opacity: 0.5; transition: opacity 0.12s, stroke 0.12s; }
+.mm-edge.mm-hi { stroke: var(--accent); opacity: 0.95; }
+.mm-edge.mm-dim { opacity: 0.07; }
+.mm-node { cursor: pointer; transition: opacity 0.12s; }
+.mm-node.mm-dim { opacity: 0.2; }
+.mm-dot { fill: var(--accent); opacity: 0.85; transition: opacity 0.12s; }
+/* Sphere-shade overlay: lifts a flat dot to a sphere (highlight + shaded far edge) via a shared radial gradient,
+   over any fill color and in both themes. Non-interactive so clicks fall through to the dot; it dims with the node. */
+.mm-sphere-shade { pointer-events: none; }
+.mm-node:hover .mm-dot, .mm-node:focus .mm-dot, .mm-node.mm-hi .mm-dot { opacity: 1; stroke: var(--text); stroke-width: 1.5; }
+.mm-node.mm-sel .mm-dot { opacity: 1; stroke: var(--text); stroke-width: 2.5; }
+.mm-node:focus { outline: none; }
+/* A halo (paint-order stroke in the background color) keeps each label readable even where labels overlap. */
+.mm-label {
+  font-family: var(--font-mono); font-size: 11px; fill: var(--text-mid); pointer-events: none;
+  paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round;
+}
+.mm-node:hover .mm-label, .mm-node:focus .mm-label, .mm-node.mm-hi .mm-label, .mm-node.mm-sel .mm-label { fill: var(--text); }
+/* Declutter: low-degree ("minor") nodes hide their label until hovered / focused / highlighted / selected, so the
+   hubs stay labeled and the map isn't a wall of overlapping text. Zoom in or hover to read any node. */
+.mm-node.mm-minor .mm-label { opacity: 0; transition: opacity 0.12s; }
+.mm-node.mm-minor:hover .mm-label,
+.mm-node.mm-minor:focus .mm-label,
+.mm-node.mm-minor.mm-hi .mm-label,
+.mm-node.mm-minor.mm-sel .mm-label { opacity: 1; }
+/* Selection footer: shows what you clicked plus an explicit action, so a click never silently closes the map. */
+.mindmap-footer {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; min-height: 32px;
+  font-size: 12.5px; color: var(--text-mid); line-height: 1.4;
+}
+.mindmap-footer .mm-sel-name { color: var(--text); font-weight: 600; }
+.mm-ask-btn {
+  margin-left: auto; padding: 6px 14px; background: var(--accent-strong); color: #fff; border: none; border-radius: 6px;
+  cursor: pointer; font-size: 12.5px; white-space: nowrap;
+}
+.mm-ask-btn:hover { filter: brightness(1.08); }
+@media (max-width: 640px) {
+  .mindmap-modal { width: 100%; }
+  .mm-ask-btn { margin-left: 0; }
+}
+.why-modal { max-width: 620px; }
+.why-body { max-height: 62vh; max-height: 62dvh; overflow-y: auto; }
+.why-query {
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-mid);
+  border-left: 2px solid var(--accent); padding: 4px 0 4px 10px; margin-bottom: 14px;
+  overflow-wrap: anywhere;
+}
+.why-heading {
+  font-size: 10px; font-family: var(--font-mono); color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 6px;
+}
+.why-steps { margin: 0; padding-left: 18px; }
+.why-steps li { font-size: 12px; line-height: 1.55; color: var(--text-mid); margin: 4px 0; }
+.why-list { display: flex; flex-direction: column; gap: 3px; }
+.why-doc {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 11px; padding: 4px 6px; border-radius: 4px;
+  border: 1px solid transparent;
+}
+.why-doc.used { border-color: var(--border); background: var(--surface2); }
+.why-doc-name {
+  flex: 1; font-family: var(--font-mono); color: var(--text);
+  overflow-wrap: anywhere;
+}
+.why-doc.used .why-doc-name { color: var(--accent); }
+.why-doc-state { color: var(--text-dim); white-space: nowrap; font-size: 10px; }
+.why-doc-score {
+  font-family: var(--font-mono); color: var(--text-dim);
+  font-size: 10px; min-width: 34px; text-align: right;
+}
+.why-foot { font-size: 10px; color: var(--text-dim); margin-top: 14px; }
+
+/* ── API keys (settings) ── */
+.apikey-list { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.apikey-empty { color: var(--text-dim); font-size: 13px; padding: 4px 0; }
+.apikey-row { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 10px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px; }
+.apikey-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.apikey-name { font-weight: 600; font-size: 13px; }
+.apikey-meta { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+.apikey-revoke { background: none; border: 1px solid var(--border); color: var(--error);
+  font-size: 12px; padding: 4px 10px; border-radius: 5px; cursor: pointer; flex-shrink: 0; transition: background 0.15s; }
+.apikey-revoke:hover { background: var(--error-tint); }
+/* The create-key form stacks its scopes, rate-limit input, and button vertically. */
+.apikey-create { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.apikey-create input { flex: 1; }
+/* Textareas in the settings modal (e.g. the prompt-template body) share the input styling
+   so they aren't an unthemed white box in dark mode. */
+.settings-box textarea { background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 7px; padding: 6px 10px; font-family: var(--font-sans); font-size: 13px; width: 100%; box-sizing: border-box;
+  resize: vertical; }   /* vertical only — dragging wider than the dialog is never useful and can overflow it */
+.settings-box textarea:focus { border-color: var(--accent); outline: none; }
+/* Fixed-pixel widths on connector / SMTP / API-key / template inputs must never overflow the
+   settings modal on a narrow phone. */
+.connector-fields input, .connector-fields select,
+.apikey-create input, .apikey-create textarea { max-width: 100%; box-sizing: border-box; }
+.apikey-create button { background: var(--accent-strong); color: #fff; border: none; padding: 6px 14px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+.apikey-create button:disabled { opacity: 0.5; cursor: default; }
+.apikey-new { margin-top: 8px; padding: 10px; background: var(--accent-dim); border-radius: 6px; width: 100%; }
+.apikey-new.hidden { display: none; }
+/* Use --error, not --warn-text: on the accent-dim panel this one-time "copy it now" caution needs
+   AA contrast in every theme (amber --warn-text dips to 4.25:1 in sepia), and the stronger color
+   also fits the urgency. --error clears 4.5:1 on accent-dim in dark, light, and sepia. */
+.apikey-warn { font-size: 12px; color: var(--error); margin: 0 0 6px; }
+.apikey-secret { display: flex; align-items: center; gap: 8px; }
+.apikey-secret code { flex: 1; font-size: 12px; word-break: break-all; background: var(--bg); padding: 6px 8px; border-radius: 4px; }
+.apikey-copy { background: var(--bg-elev); border: 1px solid var(--border); color: var(--text);
+  padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+
+/* ── URL ingestion (doc panel) ── */
+#url-ingest { display: flex; gap: 6px; margin: 8px 0 2px; }
+#url-ingest input { flex: 1; font-size: 13px; padding: 6px 8px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--bg-elev); color: var(--text); }
+#url-ingest button { background: var(--accent-strong); color: #fff; border: none; padding: 6px 14px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; }
+#url-ingest button:disabled { opacity: 0.5; cursor: default; }
+.url-status { font-size: 12px; margin: 2px 0 6px; min-height: 14px; }
+.url-status.working { color: var(--text-dim); }
+.url-status.ok { color: var(--success); }
+.url-status.error { color: var(--error); }
+
+/* ── Outcome-aware retrieval: rating + similar note ── */
+/* ── Answer meta: one stable block per answer ──
+   The sources row sits above this block; the action strip and any follow-up questions share it. The
+   action strip uses explicit order values, so the rating, read-aloud, Verify, and More controls keep
+   the same reading order no matter which server event (answer, late badge, restore) creates them. */
+.answer-meta { display: flex; flex-direction: column; gap: 2px; }
+.answer-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 2px 20px 8px; animation: fadeIn 0.18s ease;
+}
+.answer-actions > * { margin: 0; }
+.answer-actions .rating-row { order: 1; margin: 0; }
+.answer-actions .readaloud-btn, .answer-actions .podcast-hint { order: 2; margin-left: 0; }
+.answer-actions .faith-badge { order: 3; margin-left: 0; }
+.answer-actions .answer-menu { order: 99; margin-left: auto; }
+.answer-actions .answer-menu-btn { margin-left: 0; }
+.answer-actions .answer-menu-list { left: auto; right: 0; }
+.answer-actions .faith-panel { order: 100; flex-basis: 100%; margin: 6px 0 2px; }
+.answer-meta .suggest-row { margin: 0; padding: 0 20px 10px; }
+
+.rating-row { display: flex; align-items: center; gap: 6px; margin: 4px 0 2px 8px; }
+.rating-label { font-size: 12px; color: var(--text-dim); }
+.rate-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px;
+  padding: 2px 8px; cursor: pointer; font-size: 14px; line-height: 1.2; opacity: 0.7; }
+.rate-btn:hover { opacity: 1; background: var(--bg-elev); }
+.rate-btn.active { opacity: 1; border-color: var(--accent); background: var(--bg-elev); }
+.similar-note { font-size: 12px; color: var(--text-dim); font-style: italic;
+  margin: 6px 0 6px 8px; padding-left: 8px; border-left: 2px solid var(--accent); }
+.rating-ack { font-size: 12px; color: var(--success); margin-left: 6px; }
+
+/* ── Suggested follow-up questions ── */
+.suggest-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 2px 8px; }
+.suggest-label { font-size: 11px; font-family: var(--font-mono); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.suggest-chip {
+  font-size: calc(12px * var(--read-scale)); line-height: 1.3; text-align: left;
+  background: var(--surface2); color: var(--text-mid);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 4px 10px; cursor: pointer; max-width: 100%;
+  white-space: normal; overflow-wrap: anywhere;
+}
+.suggest-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--bg-elev); }
+
+/* ── API key creation: scopes + rate limit ── */
+.apikey-scopes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; }
+.apikey-scopes-label { font-weight: 600; color: var(--text-dim); }
+.apikey-scopes label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; flex: 0 0 auto; white-space: nowrap; min-width: 0; }
+.apikey-scopes label input[type="checkbox"] { margin: 0; flex: 0 0 auto; }
+.apikey-workspaces { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13px; }
+.apikey-ws-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
+.apikey-ws-list label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; flex: 0 0 auto; white-space: nowrap; min-width: 0; }
+.apikey-ws-list label input[type="checkbox"] { margin: 0; flex: 0 0 auto; }
+.apikey-rate { font-size: 13px; }
+.apikey-rate label { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.apikey-rate input { padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-elev); color: var(--text); }
+
+/* ── Connectors ── */
+.connector-fields { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; font-size: 13px; margin-bottom: 6px; }
+/* A field is its label text plus its control. It is allowed to shrink and wrap instead of forcing
+   the row wider than the Settings panel (the old fixed pixel widths on the inputs did exactly that,
+   pushing Browse and the server-package field outside the panel on a phone). */
+.connector-fields label { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex: 0 1 auto; flex-wrap: wrap; }
+.connector-fields .connector-input { flex: 1 1 150px; min-width: 0; width: auto; }
+.connector-fields select, .connector-fields input {
+  padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-elev); color: var(--text);
+}
+/* Connector/automation row actions (Test, Sync, Run now, Pause/Resume) — themed like the other small
+   maintenance buttons so they don't fall back to native browser chrome beside the themed Remove button. */
+.connector-test, .connector-sync {
+  font-size: 11px; font-family: var(--font-mono);
+  border: 1px solid var(--border); background: none; color: var(--text-mid);
+  border-radius: 5px; padding: 5px 10px; cursor: pointer;
+}
+.connector-test:hover, .connector-sync:hover { border-color: var(--accent); color: var(--accent); }
+.connector-test:disabled, .connector-sync:disabled { opacity: 0.6; cursor: default; }
+
+.connector-help { flex-basis: 100%; margin: 2px 0 0; line-height: 1.4; }
+.connector-help code { font-size: 12px; padding: 1px 4px; background: var(--bg-elev); border-radius: 3px; }
+
+/* The folder picker can open on top of the settings modal (connector Browse),
+   so it must stack above other overlays. */
+#picker-overlay { z-index: 210; }
+
+/* ── Connector removal modal (three explicit choices) ── */
+/* Triggered from inside the settings modal (z-index 200), so it must stack above it. */
+.connector-remove-overlay { z-index: 220; }
+/* Same — the rebuild-index confirmation is also opened from within settings. */
+.rebuild-confirm-overlay { z-index: 220; }
+.connector-remove-box { max-width: 400px; }
+.connector-remove-note { word-break: normal !important; }
+.connector-remove-btns { flex-wrap: wrap; }
+.connector-keep-btn { background: var(--surface2); color: var(--text); }
+.connector-remove-btns .connector-delete-btn { background: var(--error-strong); color: #fff; border-color: var(--error-strong); }
+
+/* ── Connector status ── */
+.connector-row .apikey-info { display: flex; flex-direction: column; gap: 2px; }
+.connector-status { font-size: 12px; font-family: var(--font-mono); }
+.connector-status-ok    { color: var(--success, #16a34a); }
+.connector-status-error { color: var(--error, #dc2626); }
+.connector-status-never { color: var(--text-dim); }
+.connector-error-detail { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono);
+  word-break: break-word; margin-top: 1px; max-width: 420px; }
+.connector-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Related documents (modal, opened from the toolbar button) ── */
+.viewer-related-empty.hidden { display: none; }
+.viewer-related-overlay { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: flex-start; justify-content: center; z-index: 300; padding-top: 72px; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.viewer-related-overlay.hidden { display: none; }
+.viewer-related-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: min(560px, 92vw); max-height: 70vh; max-height: 70dvh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.3); padding: 18px 20px 20px; }
+.viewer-related-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.viewer-related-title { font-size: 13px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin: 0; }
+.viewer-related-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.viewer-related-list li { display: flex; align-items: baseline; gap: 10px; }
+.viewer-related-link { color: var(--accent); text-decoration: none; font-size: 14px; }
+.viewer-related-link:hover { text-decoration: underline; }
+.viewer-related-score { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); flex-shrink: 0; }
+.viewer-related-empty { color: var(--text-dim); font-size: 13px; margin: 4px 0 0; }
+#viewer-related-count { font-family: var(--font-mono); font-size: 11px; opacity: 0.8; }
+
+/* Maintenance action button (e.g. Rebuild index) — cautionary, not destructive. */
+.danger-btn { background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 7px 14px; border-radius: 7px; cursor: pointer; font-size: 13px; }
+.danger-btn:hover:not(:disabled) { border-color: var(--error); color: var(--error); }
+.danger-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* Browser clipper — the draggable bookmarklet button shown after creation. */
+.clipper-result { display: flex; align-items: center; gap: 12px; }
+.clipper-result.hidden { display: none; }
+.clipper-drag { display: inline-block; background: var(--accent-strong); color: #fff; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; cursor: grab; }
+.clipper-drag:hover { opacity: 0.92; }
+
+/* Keep every editable field at least 16px on ANY touch device, not just narrow ones: iOS Safari
+   zooms the viewport (and stays zoomed) when a field smaller than 16px gains focus, and a large
+   phone in landscape is wider than 640px so the mobile block below wouldn't catch it. Gating on the
+   input capability rather than width covers every orientation; 16px inputs are harmless on a desktop
+   touchscreen. */
+@media (pointer: coarse) {
+  #message-input,
+  .settings-box input:not([type="checkbox"]), .settings-box select, .settings-box textarea,
+  .prompt-modal .prompt-input, #url-ingest input,
+  #doc-panel input:not([type="checkbox"]):not([type="file"]), #doc-panel textarea,
+  .extract-col-input, #note-title, #note-body,
+  .help-search input, #date-from, #date-to { font-size: 16px; }
+  /* The document/folder checkboxes reach the 24px minimum tap size on ANY touch device, not just
+     phones ≤640px. The folder select-all (.df-check) matters most: the folder row's own click toggles
+     expand/collapse and steps aside for this checkbox, so it is the only way to select a whole folder
+     and has no larger-target fallback — a touch tablet in landscape would otherwise leave it at 13px. */
+  .doc-item .di-check, .doc-folder .df-check { width: 24px; height: 24px; }
+  /* Citation chips are the main way to open a cited source; on touch keep them to the WCAG 2.5.8
+     minimum (24px) target instead of their ~18px desktop height. Both are inline-flex with centered
+     items, so the taller box keeps the label vertically centered. */
+  .source-pill { min-height: 24px; }
+  /* Every other primary/near-primary control reaches the 24px minimum tap size on ANY touch device,
+     not only phones ≤640px — a touch tablet in landscape (coarse pointer, width > 640px) is just as
+     thumb-driven. These are SIZE rules only; phone-specific LAYOUT stays in the max-width:640px block.
+     (Mouse-only narrow windows keep the compact desktop sizing, which a precise pointer handles fine.) */
+  .doc-item .di-del, .doc-item .di-summarize, .source-del { padding: 8px; }
+  .tool-chip-x, .attach-chip button { width: 24px; height: 24px; font-size: 15px; }
+  .rate-btn, .fig-btn, .readaloud-btn, .answer-menu-btn, .answer-menu-item { min-height: 24px; padding: 4px 10px; }
+  .logs-tab, .logs-refresh { min-height: 24px; padding: 5px 12px; }
+  #doc-select-all { min-height: 24px; padding: 5px 9px; }
+  #doc-panel-header .hdr-btn, #doc-panel-header .hdr-select { min-height: 24px; padding: 6px 10px; }
+  /* The composer attach (paperclip) button is a primary touch target too — give it the 24px minimum. */
+  #attach-btn { min-height: 24px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Mobile / narrow-viewport styles. The app is desktop-first; these adapt the
+   layout for phones and small windows (≤640px). Nothing here changes desktop.
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Header: wrap onto as many rows as needed so every control stays visible and
+     tappable, rather than scrolling actions (Settings, theme) off-screen with no
+     affordance. The model badge and status text are noise on a phone — hide them to
+     save space. */
+  #header {
+    /* Add the device safe-area insets on top of the mobile padding so the installed PWA header
+       clears the status bar / notch (the insets are 0 off-notch, so this stays 6px/10px there). */
+    padding: calc(6px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-right, 0px)) 6px calc(10px + env(safe-area-inset-left, 0px));
+    gap: 6px 8px; height: auto; min-height: 48px;
+    flex-wrap: wrap; align-items: center;
+  }
+  #header .logo { font-size: 12px; flex-shrink: 0; }
+  #status-badge { display: inline-flex; padding: 5px; gap: 0; border: 0; background: none; flex-shrink: 0; }
+  #status-badge .dot { width: 8px; height: 8px; }
+  /* Visually hide the text but keep the role=status live region in the accessibility tree. */
+  #status-badge #status-text {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  #hdr-model { display: none; }
+  .hdr-btn { padding: 6px 10px; font-size: 12px; flex-shrink: 0; white-space: nowrap; }
+  /* Let the workspace picker take the rest of the first row so it doesn't crowd the
+     buttons onto a cramped line. */
+  #workspace-select { flex: 1 1 120px; min-width: 120px; max-width: 100%; }
+  /* Push the theme toggle to the end of the row group so it's always the last item. */
+  #theme-toggle { margin-left: auto; }
+
+  /* Doc panel becomes a full-width overlay drawer instead of a sidebar that would
+     squeeze the chat to nothing on a narrow screen. */
+  #main { position: relative; }
+  #doc-panel {
+    position: absolute; top: 0; right: 0; bottom: 0;
+    width: 100%; max-width: 100%;
+    z-index: 50; box-shadow: -4px 0 24px rgba(0,0,0,0.3);
+  }
+  #doc-panel.collapsed { width: 0; }
+  .doc-panel-close { display: inline-flex !important; }
+  /* The header is a column (title row + wrapping actions row) at every width, so the title ellipsis and the
+     actions wrap are already handled in the base rules — nothing viewport-specific is needed here. */
+
+  /* Give chat bubbles more of the width — 72% wastes space on a phone. */
+  .bubble { max-width: 88%; }
+  .msg-row { padding: 2px 12px; }
+  /* The per-answer sibling rows (sources, action strip, follow-up chips) are NOT nested in .msg-row, so the
+     reduced padding above doesn't reach them. Match their horizontal padding to the bubble's so an answer's
+     pills, actions, and chips line up with its left edge instead of sitting 8px further in. */
+  .sources-row, .answer-actions, .answer-meta .suggest-row { padding-left: 12px; padding-right: 12px; }
+
+  /* Input area + form: tighter padding, full width. */
+  #input-area { padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #input-form { max-width: 100%; flex-wrap: wrap; }
+  /* On a phone the attach, Tools, input, and Send buttons don't all fit on one row — sharing it squeezed
+     the text field to a sliver that clipped the placeholder. Give the field its own full-width row and let
+     the controls wrap onto the row below it, with Send pushed to the right where the thumb expects it. */
+  #message-input { flex-basis: 100%; order: -1; }
+  #send-button { margin-left: auto; }
+  /* Prevent iOS Safari from zooming the viewport when a text field smaller than 16px gains focus (it
+     then stays zoomed). Sizing the field is the fix; the viewport meta keeps pinch-zoom available, so
+     this does not lock scaling. */
+  #message-input,
+  .settings-box input:not([type="checkbox"]), .settings-box select, .settings-box textarea,
+  .prompt-modal .prompt-input, #url-ingest input,
+  #doc-panel input:not([type="checkbox"]):not([type="file"]), #doc-panel textarea,
+  .extract-col-input, #note-title, #note-body,
+  .help-search input, #date-from, #date-to { font-size: 16px; }
+
+  /* Modals: kill the min-width (overflows a 320px phone) and use most of the width. */
+  .modal-box { min-width: 0; width: 92%; padding: 20px 18px 16px; }
+  .settings-box { max-width: 92%; }
+  /* Settings rows on a phone: the desktop two-column layout (fixed label column + input)
+     is too wide to fit, so a row with a fill-input stacks — label on its own line above a
+     full-width input — instead of squeezing the value into a sliver that clips it. */
+  /* .settings-row-input mirrors the :has() selectors for browsers without :has() (see chat.js). */
+  .settings-row.settings-row-input,
+  .settings-row:has(> input:not([type="checkbox"])),
+  .settings-row:has(> select),
+  .settings-row:has(> .secret-field),
+  .settings-row:has(> .settings-input-stack) {
+    flex-direction: column; align-items: stretch; gap: 4px;
+  }
+  .settings-row.settings-row-input > label,
+  .settings-row:has(> input:not([type="checkbox"])) > label,
+  .settings-row:has(> select) > label,
+  .settings-row:has(> .secret-field) > label,
+  .settings-row:has(> .settings-input-stack) > label {
+    flex: none; width: auto; padding-top: 0;
+  }
+  .settings-row > .secret-field { width: 100%; }
+  /* A row whose control is an action button (e.g. "Suggest models") also stacks on a phone: its
+     label keeps the full width and the button sits below it instead of wrapping off the panel. */
+  .settings-row-action { flex-direction: column; align-items: stretch; gap: 4px; }
+  .settings-row-action > label { flex: none; width: auto; padding-top: 0; }
+  .settings-row-action > button { align-self: flex-start; }
+  /* Voice pickers: stack the label above a full-width picker. The selects share the row and the
+     preview button stays visible instead of being pushed past the panel's right edge. */
+  .settings-row-voices { flex-direction: column; align-items: stretch; gap: 4px; }
+  .settings-row-voices > label { flex: none; width: auto; padding-top: 0; }
+  .settings-row-voices > .voice-pick { flex: 1 1 auto; width: 100%; }
+  /* One host per line on a phone, so the full voice name is readable. */
+  .voice-pair { flex: 1 1 100%; width: 100%; }
+  /* Connector fields: one full-width field per line, with the input and its action button wrapping
+     inside it. This keeps Browse, the GitHub fields, and the server-package input inside the panel. */
+  .connector-fields { flex-direction: column; align-items: stretch; gap: 8px; }
+  .connector-fields > label { flex: 1 1 auto; }
+  .connector-fields .connector-input { flex: 1 1 100%; width: 100%; }
+  /* A checkbox row stays on ONE line: the label is free to shrink and wrap so it never
+     runs off-screen, and the box stays pinned to the right beside it (rather than wrapping
+     onto its own line far below the label). */
+  .settings-row:has(> input[type="checkbox"]) { flex-wrap: nowrap; }
+  .settings-row:has(> input[type="checkbox"]) > label { flex: 1; min-width: 0; }
+
+  /* NOTE: the 24px tap-target SIZE rules for touch (icon buttons, chips, checkboxes, rating/logs/
+     doc-panel controls) live in the @media (pointer: coarse) block above, so they apply on touch
+     tablets wider than 640px too — not only phones. This block keeps phone-specific LAYOUT only. */
+
+  /* The composer mode toggles now live inside the Tools menu. Give the menu rows comfortable touch
+     targets, and present both the Tools menu and the header More menu as bottom sheets — within
+     thumb reach and with room for each option's label and description (see the UX research). */
+  .tool-row, .menu-row { padding: 11px 10px; }
+  .tools-btn { padding: 0 10px; }
+  .tools-menu, .hdr-menu {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: 100%; max-width: 100%;
+    border-radius: 16px 16px 0 0; z-index: 80;
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.4);
+    /* Cap the sheet and scroll inside it, so on a short/landscape screen the sheet never runs off
+       the top with unreachable rows. dvh tracks the visible viewport (the vh line is the fallback), so
+       the sheet's top can't sit under the mobile browser toolbar — matching the app's other height caps. */
+    max-height: 80vh; max-height: 80dvh; overflow-y: auto;
+  }
+  /* The Tools sheet gets an explicit title and close control, and scrolls under a sticky header.
+     The negative offsets align it with the sheet's own padding so it spans the full width. */
+  .tools-menu .sheet-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    position: sticky; top: -8px; z-index: 2;
+    margin: -8px -10px 6px; padding: 8px 10px 6px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .sheet-title {
+    font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-mid);
+  }
+  .sheet-close {
+    width: 34px; height: 34px; min-width: 34px; display: grid; place-items: center;
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text-mid); font-size: 14px; line-height: 1; cursor: pointer;
+  }
+  .sheet-close:hover { border-color: var(--accent); color: var(--accent); }
+  .sheet-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tools-menu { overscroll-behavior: contain; }
+  /* No fixed-min-width control may overflow the modal on a narrow phone (the connector and
+     API-key inputs already do this; the OCR selects and any automation inputs were missed). */
+  #cfg-ocr-engine, #cfg-ocr-workers,
+  .settings-box input:not([type="checkbox"]), .settings-box select, .settings-box textarea {
+    min-width: 0; max-width: 100%;
+  }
+
+  /* Document viewer: tighten the toolbar and content padding. */
+  .viewer-toolbar { flex-wrap: wrap; gap: 8px; padding: 8px 10px; }
+  .viewer-toolbar h1 { font-size: 13px; width: 100%; order: -1; }
+  .viewer-content { padding: 12px 14px !important; }
+  .viewer-related-modal { width: 94vw; }
+}
+
+/* Larger phones / small tablets — a lighter touch. */
+@media (min-width: 641px) and (max-width: 900px) {
+  #doc-panel { width: 300px; }
+  .bubble { max-width: 80%; }
+}
+
+/* Full-Context toggle in the document filter bar (shown only when docs are focused). */
+#doc-fullcontext-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-dim); cursor: pointer; white-space: nowrap; }
+#doc-fullcontext-toggle.hidden { display: none; }
+#doc-fullcontext-toggle input { margin: 0; }
+
+/* # command document picker — floats above the chat input. */
+.hash-picker { position: absolute; bottom: 100%; left: 0; margin-bottom: 6px; max-width: min(360px, calc(100vw - 20px)); max-height: 240px; overflow-y: auto; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.25); z-index: 60; padding: 4px; }
+.hash-picker.hidden { display: none; }
+.hash-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--text); }
+.hash-item.active, .hash-item:hover { background: var(--accent-strong); color: #fff; }
+.hash-item .hash-icon { opacity: 0.6; font-size: 12px; }
+.hash-item .hash-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#input-area { position: relative; }
+
+/* One-off attachment button + chips. */
+#attach-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 8px; opacity: 0.7; align-self: flex-end; }
+#attach-btn:hover { opacity: 1; }
+/* Voice buttons (push-to-talk + hands-free). An icon button sized to match the composer height, a clear tap
+   target; the icon turns accent on hover. The mic pulses in the error color while listening and dims while
+   transcribing; hands-free pulses in the accent color while the loop is live. Hidden until the feature is
+   enabled in Settings and the browser can record (.hidden is per-element in this file). */
+.mic-btn {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-dim);
+  cursor: pointer; height: 42px; width: 42px; padding: 0; flex-shrink: 0; align-self: flex-end;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 20px;
+  transition: color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.mic-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.mic-btn:disabled { cursor: default; }
+.mic-btn.hidden { display: none; }
+#mic-btn.listening { color: var(--error); border-color: var(--error); animation: mic-pulse 1.3s ease-in-out infinite; }
+#mic-btn.working { opacity: 0.6; }
+@keyframes mic-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+/* Hands-free: an accented, gently pulsing button while the conversation loop is live. */
+#handsfree-btn.active { color: var(--accent); border-color: var(--accent); animation: mic-pulse 1.6s ease-in-out infinite; }
+/* Respect reduced-motion: keep the color cue, drop the pulse. */
+@media (prefers-reduced-motion: reduce) { #mic-btn.listening, #handsfree-btn.active { animation: none; } }
+.attach-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 4px 0; }
+.attach-chips.hidden { display: none; }
+.attach-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 3px 10px; font-size: 12px; color: var(--text); }
+/* A long unbroken filename truncates within the chip so the ✕ stays visible and reachable, rather than
+   the whole chip overflowing the row (a single chip can't flex-wrap). */
+.attach-chip .attach-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.attach-chip button { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 0; font-size: 12px; flex-shrink: 0; }
+.attach-chip button:hover { color: var(--text); }
+
+/* ── Scheduled-automation inbox ─────────────────────────────────────────────── */
+.inbox-badge {
+  display: inline-block; margin-left: 5px; min-width: 15px; padding: 0 5px;
+  font-size: 10px; line-height: 15px; text-align: center; font-family: var(--font-mono);
+  background: var(--accent-strong); color: #fff; border-radius: 8px;
+}
+.inbox-badge.hidden { display: none; }
+.inbox-list { overflow-y: auto; max-height: 62vh; max-height: 62dvh; padding: 8px 4px; }
+.inbox-item {
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  margin-bottom: 8px; background: var(--surface);
+}
+.inbox-item.unread { border-color: var(--accent); }
+.inbox-item-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+.inbox-item-title { font-weight: 600; color: var(--text); font-size: 13px; overflow-wrap: anywhere; min-width: 0; }
+.inbox-item-meta { font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); white-space: nowrap; }
+.inbox-item-body { font-size: calc(12px * var(--read-scale)); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; max-height: 320px; overflow-y: auto; }
+.inbox-item-sources { margin-top: 6px; font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); }
+
+/* ── Quality evaluation (Settings) ──────────────────────────────────────────── */
+#eval-results { margin-top: 10px; }
+.eval-metrics { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.eval-metric { flex: 1 1 120px; min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--surface); text-align: center; }
+.eval-metric-val { font-size: 18px; font-weight: 600; color: var(--text); }
+.eval-metric-label { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.eval-qlist { margin-top: 10px; max-height: 260px; overflow-y: auto; }
+.eval-qrow { border-top: 1px solid var(--border); padding: 7px 2px; }
+.eval-qtext { font-size: 12px; color: var(--text); overflow-wrap: anywhere; display: block; }
+.eval-qscores { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); margin-top: 2px; display: block; overflow-wrap: anywhere; }
+/* A row with a drill-down is a native <details>, so it is keyboard-operable and needs no script. */
+details.eval-qrow > summary { cursor: pointer; list-style: none; display: block; }
+details.eval-qrow > summary::-webkit-details-marker { display: none; }
+details.eval-qrow > summary::before { content: '▸'; color: var(--text-dim); font-size: 9px; margin-right: 6px; }
+details.eval-qrow[open] > summary::before { content: '▾'; }
+.eval-detail { padding: 4px 0 2px 14px; font-size: 11px; color: var(--text-dim); }
+.eval-detail ul { margin: 2px 0 0; padding-left: 16px; }
+.eval-detail li { margin: 2px 0; overflow-wrap: anywhere; }
+.eval-detail-h {
+  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  margin-top: 8px; color: var(--text-dim);
+}
+.eval-detail-tag { color: var(--warn-text); }
+.eval-detail-preview { margin-top: 2px; color: var(--text-mid); white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Standing quality trend (sparkline per metric across run history). */
+.eval-trend-wrap { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.eval-trend-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.eval-trend-item { flex: 1 1 150px; min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--surface); }
+.eval-trend-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; color: var(--text-dim); gap: 8px; }
+.eval-trend-now { font-size: 13px; font-weight: 600; color: var(--text); font-family: var(--font-mono); }
+
+/* A/B comparison of two recorded runs */
+.eval-compare-wrap { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.eval-compare-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.eval-compare-controls label { display: flex; gap: 4px; align-items: center; font-size: 12px; color: var(--text-dim); min-width: 0; }
+.eval-compare-controls select { max-width: 100%; }
+.eval-compare-summary { margin-top: 8px; }
+.eval-compare-table-wrap { overflow-x: auto; margin-top: 8px; }
+.eval-compare-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.eval-compare-table th, .eval-compare-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.eval-compare-table thead th { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+.eval-compare-num { text-align: right; font-variant-numeric: tabular-nums; }
+.eval-compare-win { font-size: 10px; color: var(--success); }
+.eval-compare-questions { margin-top: 8px; }
+.eval-compare-questions > summary { cursor: pointer; font-size: 12px; color: var(--text-dim); }
+.eval-spark { width: 100%; height: 30px; display: block; margin-top: 4px; }
+.eval-spark-empty { height: 30px; color: var(--text-dim); font-size: 11px; display: flex; align-items: center; }
+
+/* ── Faithfulness badge + flagged-claims panel (Verify) ─────────────────────── */
+.faith-badge {
+  display: inline-block; margin-left: 8px; padding: 2px 9px; border-radius: 10px;
+  font-size: 11px; font-family: var(--font-mono); cursor: pointer;
+  border: 1px solid transparent; background: var(--surface2); color: var(--text-dim);
+}
+.faith-badge.faith-high   { background: var(--success-bg); color: var(--success); }
+/* Self-checked: neutral, NOT the confident green — a self-judge isn't authoritative assurance. */
+.faith-badge.faith-selfcheck { background: var(--surface2); color: var(--text-mid); border-color: var(--border); }
+.faith-badge.faith-medium { background: var(--warn-bg);    color: var(--warn-text); }
+.faith-badge.faith-low    { background: var(--warn-bg);    color: var(--error); border-color: var(--error); }
+.faith-panel { margin: 6px 0 2px; display: flex; flex-direction: column; gap: 4px; }
+.faith-panel.hidden { display: none; }
+
+/* Answer-confidence chip — one holistic verdict on an answer (distinct from the per-source match dots). Same
+   look as the Verify badge; informational (not a disclosure), so it is a plain span, not a button. Text scales
+   with the Text Size control. The level classes are deliberately the same names the server projects. */
+.answer-conf-chip {
+  display: inline-block; margin-left: 8px; padding: 2px 9px; border-radius: 10px;
+  font-size: calc(11px * var(--read-scale)); font-family: var(--font-mono); cursor: default;
+  border: 1px solid transparent; background: var(--surface2); color: var(--text-dim);
+}
+.answer-conf-chip.conf-high   { background: var(--success-bg); color: var(--success); }
+.answer-conf-chip.conf-medium { background: var(--warn-bg);    color: var(--warn-text); }
+.answer-conf-chip.conf-low    { background: var(--warn-bg);    color: var(--error); border-color: var(--error); }
+/* Seat the chip just after the Verify badge (order 3), not at the far-left order-0 cluster; the flex `gap`
+   already spaces items, so drop the inline margin like the Verify badge does. */
+.answer-actions .answer-conf-chip { order: 4; margin-left: 0; }
+/* The optional thin-evidence caveat wraps onto its own full-width line BENEATH the whole action strip. It needs
+   an order above every control (the faith-panel uses 100) or, as an order-0 full-width item, it would split the
+   strip and land in the middle. */
+.answer-conf-caveat { flex-basis: 100%; width: 100%; order: 101; font-size: calc(11px * var(--read-scale)); color: var(--text-mid); margin-top: 2px; }
+.faith-line {
+  font-size: 12px; line-height: 1.4; color: var(--text);
+  display: flex; gap: 8px; align-items: baseline;
+  padding: 6px 8px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border);
+  overflow-wrap: anywhere;   /* a long unbroken figure/ID token must wrap, never force horizontal page scroll */
+}
+/* The text half of a line must be allowed to shrink and wrap inside the flex row (the tag stays fixed). */
+.faith-line > span:not(.faith-tag) { min-width: 0; overflow-wrap: anywhere; }
+.faith-line.faith-un   { border-color: var(--error); }
+.faith-line.faith-part { border-color: var(--warn-text); }   /* a partial claim reads as a caution, distinct from the neutral base */
+/* The clean-verdict line is prose with an inline <code>, not a tag + text pair, so it flows as a block
+   rather than splitting its words into flex columns. */
+.faith-line.faith-ok   { color: var(--text-dim); display: block; }
+.faith-tag {
+  flex-shrink: 0; font-size: 9px; font-family: var(--font-mono); text-transform: uppercase;
+  padding: 1px 6px; border-radius: 4px; background: var(--warn-bg); color: var(--warn-text);
+}
+.faith-line.faith-un .faith-tag { background: var(--warn-bg); color: var(--error); }
+
+/* Hardware-aware model suggestions (Settings → Provider). Uses theme tokens so it
+   adapts to dark/light/sepia like the rest of the panel. */
+#cfg-suggest-models {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 5px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+#cfg-suggest-models:hover { border-color: var(--accent); color: var(--accent); }
+#cfg-model-suggestions { display: block; flex-direction: column; gap: 6px; }
+/* The ID rule above (specificity 1,0,0) outranks the shared `.hidden` class, so without this guard the
+   suggestions box would show as an empty block before "Suggest models" is clicked, and JS could never
+   re-hide it. Keep it hidden until populated. */
+#cfg-model-suggestions.hidden { display: none; }
+.ms-sys { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
+.ms-group { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin: 8px 0 4px; }
+.ms-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 5px; }
+.ms-main { flex: 1; min-width: 0; }
+.ms-main code { font-size: 12px; }
+.ms-note { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.ms-note.ms-general { margin: 6px 0 0; }
+.ms-tag { font-size: 10px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; white-space: nowrap; }
+.ms-rec  { background: var(--accent-dim); color: var(--accent); }
+.ms-inst { border: 1px solid var(--border); color: var(--text-dim); }
+.ms-big  { border: 1px solid var(--border); color: var(--text-dim); }
+.ms-use {
+  flex: 0 0 auto; font-size: 11px; font-family: var(--font-mono);
+  background: none; border: 1px solid var(--accent); color: var(--accent);
+  border-radius: 5px; padding: 2px 10px; cursor: pointer;
+}
+.ms-use:hover { background: var(--accent-dim); }
+
+/* Embedding-banks reuse summary (Settings → Index). Read-only; driven entirely by /api/health index.banks
+   (the single source), so it stays correct across themes and never depends on document language. */
+.bank-state { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-mid); width: 100%; }
+.bank-state .bank-state-head { color: var(--text); font-weight: 500; }
+.bank-state .bank-row { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.bank-state .bank-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; background: var(--text-dim); }
+.bank-state .bank-row.is-active .bank-dot { background: var(--accent); }
+.bank-state .bank-row.is-adapter .bank-dot { background: var(--success); }
+.bank-state .bank-row.is-frozen .bank-dot { background: var(--warn-text); }
+.bank-state .bank-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bank-state .bank-tag { color: var(--text-dim); }
+.bank-state .bank-note { color: var(--text-mid); }
+.bank-state .bank-note.is-reused { color: var(--success); }
+.bank-state .bank-note.is-gap { color: var(--warn-text); }
+
+/* Pre-switch "will this re-embed?" result (Settings → Index). Colors from shared tokens, so correct in any theme. */
+.predict-result.reuse { color: var(--success); }
+.predict-result.warn  { color: var(--warn-text); }
+.predict-result.dim   { color: var(--text-dim); }

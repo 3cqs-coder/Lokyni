@@ -1,0 +1,6 @@
+# Keep the Rust manifest/lock files LF on every platform. The version-sync step and its
+# drift-guard test match the crate entry across a newline; a CRLF checkout (Windows with
+# core.autocrlf) would otherwise break both. Pinning eol here makes the checkout stable
+# regardless of the contributor's git line-ending settings.
+src-tauri/Cargo.lock text eol=lf
+src-tauri/Cargo.toml text eol=lf

@@ -1,0 +1,168 @@
+name: Linux pass
+
+# Build the Linux desktop installers and prove the packaged application runs. Dispatch-only until a hosted
+# run is green. No GUI session or signing certificate is required: the .deb is installed, the packaged
+# sidecar is started against a temporary data directory, and the .rpm metadata and contents are checked.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24.11.1'
+  PUPPETEER_SKIP_DOWNLOAD: '1'
+
+jobs:
+  installer:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Linux build dependencies
+        run: bash src-tauri/linux-build-deps.sh
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build the Linux installers
+        run: npm run tauri:build
+
+      - name: Install and verify the Linux packages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          expected=$(node -p "require('./package.json').version")
+          deb=$(find src-tauri/target -type f -name '*.deb' -print -quit)
+          rpm=$(find src-tauri/target -type f -name '*.rpm' -print -quit)
+          if [ -z "$deb" ] || [ -z "$rpm" ]; then
+            echo "Expected both a .deb and an .rpm; found:"
+            find src-tauri/target -maxdepth 5 -type f | sort | head -50 || true
+            exit 1
+          fi
+          deb=$(realpath "$deb")
+          rpm=$(realpath "$rpm")
+
+          debver=$(dpkg-deb -f "$deb" Version)
+          case "$debver" in "$expected"*) ;; *) echo "deb version $debver does not start with $expected"; exit 1;; esac
+          if ! dpkg-deb -c "$deb" | grep 'app/lokyni.js' >/dev/null; then
+            echo "deb is missing the packaged sidecar"
+            exit 1
+          fi
+
+          rpmver=$(rpm -qp --qf '%{VERSION}' "$rpm")
+          case "$rpmver" in "$expected"*) ;; *) echo "rpm version $rpmver does not start with $expected"; exit 1;; esac
+          if ! rpm -qpl "$rpm" | grep 'app/lokyni.js' >/dev/null; then
+            echo "rpm is missing the packaged sidecar"
+            exit 1
+          fi
+
+          pkg=$(dpkg-deb -f "$deb" Package)
+          sudo apt-get install -y "$deb"
+          installed=$(dpkg-query -W -f='${Version}' "$pkg")
+          case "$installed" in "$expected"*) ;; *) echo "installed version $installed does not start with $expected"; exit 1;; esac
+
+          files=$(dpkg -L "$pkg")
+          sidecar=$(printf '%s\n' "$files" | grep -E '/app/lokyni\.js$' | head -n1 || true)
+          runtime=$(printf '%s\n' "$files" | grep -E '/app/runtime/node$' | head -n1 || true)
+          [ -n "$sidecar" ] || { echo "installed package has no app/lokyni.js"; exit 1; }
+          [ -n "$runtime" ] && [ -x "$runtime" ] || { echo "installed package has no executable runtime"; exit 1; }
+          if ! printf '%s\n' "$files" | grep -E '/bin/lokyni(-shell)?$' >/dev/null; then
+            echo "installed package has no application executable"
+            exit 1
+          fi
+
+          data=$(mktemp -d)
+          pid=""
+          stop_server() {
+            if [ -n "${pid:-}" ]; then
+              kill "$pid" 2>/dev/null || true
+              for _ in $(seq 1 20); do
+                kill -0 "$pid" 2>/dev/null || break
+                sleep 0.5
+              done
+              kill -9 "$pid" 2>/dev/null || true
+              wait "$pid" 2>/dev/null || true
+              pid=""
+            fi
+          }
+          cleanup() {
+            stop_server
+            if [ -n "${data:-}" ]; then rm -rf "$data"; fi
+          }
+          trap cleanup EXIT
+
+          mkdir -p "$data/config"
+          cat > "$data/config/config.json" <<'JSON'
+          {
+            "provider": "ollama",
+            "useReranker": false,
+            "useQueryRewrite": false,
+            "useIntentClassifier": false,
+            "useConversationSummary": false,
+            "useSuggestedQuestions": false,
+            "useWebSearch": false,
+            "useRagFusion": false,
+            "useHyde": false,
+            "useAdaptiveRetrieval": false,
+            "useCorrectiveRetrieval": false,
+            "useSemanticCache": false,
+            "useEmbeddingBanks": false,
+            "useDocumentSummaries": false,
+            "useAutoSynthesis": false,
+            "useOcr": false,
+            "useVisualIngest": false,
+            "ttsEnabled": false,
+            "sttEnabled": false,
+            "useAudioIngest": false,
+            "allowNetworkAccess": false,
+            "fileLogging": false
+          }
+          JSON
+
+          port=$(node -e "const s=require('net').createServer();s.listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close();});")
+          (cd "$data" && exec "$runtime" "$sidecar" --port "$port" --bind 127.0.0.1 --data-dir "$data/data") \
+            > "$data/server.log" 2>&1 &
+          pid=$!
+
+          status=""
+          for _ in $(seq 1 60); do
+            if status=$(curl -fsS "http://127.0.0.1:$port/status" 2>/dev/null); then break; fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "The packaged server exited during startup:"
+              cat "$data/server.log"
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ -z "$status" ]; then
+            echo "The packaged server did not answer within 60 seconds:"
+            cat "$data/server.log"
+            exit 1
+          fi
+          node -e "const s=JSON.parse(process.argv[1]); if (s.documents !== 0) { console.error(s); process.exit(1); } console.log('Packaged server ready with', s.documents, 'documents');" "$status"
+
+          stop_server
+          sudo apt-get purge -y "$pkg"
+          echo "LINUX INSTALLER CHECK OK"
+
+      - name: Upload Linux installers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            src-tauri/target/**/bundle/deb/*.deb
+            src-tauri/target/**/bundle/rpm/*.rpm
+          if-no-files-found: warn
+          retention-days: 7

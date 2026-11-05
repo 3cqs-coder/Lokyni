@@ -1,0 +1,121 @@
+{
+  "genericWords": [
+    "the","a","an","this","that","these","those","it","its","they","them","their","theirs","he","she","his","her",
+    "we","our","ours","you","your","yours","i","me","my","mine","who","whom","whose","what","which","where","when",
+    "why","how","there","here",
+    "about","with","from","into","onto","upon","over","under","between","among","within","without","through",
+    "and","but","or","nor","so","then","than","also","too","yet","for","of","on","in","to","at","by","as",
+    "regarding","concerning","around",
+    "is","are","was","were","be","been","being","have","has","had","do","does","did","done","will","would","shall",
+    "should","can","could","may","might","must","make","makes","made","get","gets","got","let","lets",
+    "some","any","all","every","each","both","either","neither","more","most","many","much","few","less","least",
+    "only","just","even","still","very","well","such","same","other","others","another","else","anything",
+    "something","everything","nothing","thing","things","bit","part","parts","point","points","aspect","aspects",
+    "overview","summary","detail","details","info","information","breakdown","analysis","explanation","elaboration",
+    "great","please","okay","ok",
+    "tell","tells","told","telling","say","says","said","saying","talk","talks","talked","talking","speak","speaks",
+    "spoke","spoken","speaking","discuss","discusses","discussed","discussing","mention","mentions","mentioned",
+    "mentioning","cover","covers","covered","covering","note","notes","noted","state","states","stated","describe",
+    "describes","described","explain","explains","explained","explaining","elaborate","elaborates","elaborated",
+    "expand","expands","expanded","summarize","summarizes","summarized","summarise","analyze","analyse","break",
+    "continue","continues","continued","keep","keeps","kept","going","deeper","further","give","gives","gave",
+    "happen","happens","happened","know","knows","knew","think","thinks","want","wants","need","needs","like",
+    "likes","look","looks","show","shows","shown","mean","means","meant","use","uses","used",
+
+    "más","mas","cuéntame","cuentame","cuenta","cuéntanos","dime","dinos","explica","explícame","explicame",
+    "explique","continúa","sigue","detalla","amplía","amplia","algo","otra","otro","aún","aun","todavía",
+    "plus","encore","raconte","racontez","dis","dites","expliquez","continuez","détaille",
+    "detaille","autre","autres","davantage","dautres",
+    "mehr","weiter","weitere","erzähl","erzähle","erzählen","erzahl","erkläre","erklären","erklare","noch","sonst",
+    "ausführlicher","ausfuhrlicher",
+    "mais","conte","conta","diga","detalhe","outro","outra",
+    "più","piu","altro","altra","dimmi","racconta","spiega","continua","ancora","dettaglio","dettagli",
+    "meer","vertel","verder","anders",
+    "больше","ещё","еще","расскажи","расскажите","объясни","объясните","подробнее","дальше","продолжай","продолжи",
+    "что","ще","більше","розкажи",
+    "więcej","wiecej","dalej","opowiedz","wyjaśnij","wyjasnij","jeszcze",
+    "daha","fazla","anlat","açıkla","acikla","devam","başka","baska","biraz",
+    "mer","mera","berätta","beratta","förklara","forklara","fortsätt","fortsatt","annat",
+    "mult","spune","explică","continuă","altceva",
+    "lagi","lebih","ceritakan","jelaskan","lanjutkan","apa"
+  ],
+
+  "requestWords": [
+    "give","me","an","in","depth","analysis","analyse","analyze","elaborate","detail","details","detailed",
+    "more","tell","about","explain","describe","overview","summary","summarize","summarise","expand","expanded",
+    "continue","continued","else","anything","happened","end","ends","ended","ending","last","final","finale",
+    "finish","finished","conclusion","conclude","outcome","result","epilogue","afterward","afterwards",
+    "info","information","breakdown","deep","deeper","dive","go","keep","please","can","you","what","who","when",
+    "where","why","how","which","that","this","it","they","them","he","she","us","your","our","the","of","for",
+    "and","with","into","further","additional","extra","another","next","other","some","much","many","like","want","need"
+  ],
+
+  "stopWordsGate": [
+    "tell","about","more","detail","great","what","that",
+    "this","with","from","have","will","does","when","where","which","their",
+    "make","know","some","them","into","then","than","also","only","just",
+    "give","elaborate","overview","summary","explain","describe","list"
+  ],
+
+  "properNounStop": [
+    "what","who","when","where","why","how","which","tell","about","more","give","show","list","explain","describe",
+    "the","this","that","these","those","your","you","can","could","would","should","please","else"
+  ],
+
+  "groundingStop": [
+    "what","who","when","where","why","how","which","whom","whose",
+    "give","me","my","tell","show","list","explain","describe","get","find",
+    "about","more","most","all","any","some","other","another","else","anything",
+    "detail","details","detailed","elaborate","overview","summary","summarize","summarise",
+    "expand","expanded","continue","continued","info","information","breakdown",
+    "deep","deeper","dive","depth","analysis","analyse","analyze","recap",
+    "the","a","an","of","for","and","or","but","with","into","from","to","on","in","at","by",
+    "is","are","was","were","be","been","being","do","does","did","can","could","would",
+    "should","will","shall","may","might","must","have","has","had",
+    "this","that","these","those","it","its","they","them","their","there","here",
+    "he","him","his","she","her","hers",
+    "you","your","yours","we","us","our","please","also","then","than","so","just",
+    "like","want","need","know","see","look","go","keep","make","case","thing","things"
+  ],
+
+  "entityStopCaps": [
+    "the","this","that","these","those","it","its","a","an","in","on","at","to","for",
+    "and","or","but","if","as","we","you","they","he","she","i","our","their","his","her",
+    "there","here","when","where","why","how","what","who","which","while","with","from","by",
+    "is","are","was","were","be","been","being","do","does","did","can","could","would","should",
+    "will","may","might","must","have","has","had","not","no","yes","also","then","than","so",
+    "however","therefore","meanwhile","note","summary","document","section","page","figure","table"
+  ],
+
+  "entityConnectors": ["of","the","de","von","van","da","del","la","le"],
+
+  "endingDeathTerms": [
+    "died","dies","death","dead","deceased","killed","murder","murdered","suicide","executed","poisoned",
+    "drowned","buried","funeral","perished","demise","fatally","sentenced","condemned"
+  ],
+
+  "connectiveCues": [
+    "connect","connects","connected","connecting","link","links","linked","linking","tie","ties","tied",
+    "relate","relates","related","relating","associate","associates","associated","bridge","bridges",
+    "relationship","relationships","connection","connections","association","associations","correlate","correlation",
+    "relaciona","relacionar","relacionan","relacionado","relación","relaciones","conecta","conectar","conexión",
+    "vincula","vincular","vínculo","vinculado","asocia","asociar",
+    "relie","relier","relient","relié","relation","lien","liens","connecte","connecter","connexion","associe","associer",
+    "verbindung","verbindet","verbinden","verbunden","beziehung","zusammenhang","verknüpft","verknüpfung",
+    "relaciona","relacionar","relação","relações","conecta","conectar","conexão","liga","ligação",
+    "collega","collegare","collegamento","relazione","connessione","connette","associa","legame",
+    "verband","verbinden","relatie","koppel","koppeling",
+    "связь","связать","связан","связи","соедини","соединить","отношение","отношения",
+    "połączenie","połącz","związek","powiązanie","relacja",
+    "ilişki","bağla","bağlantı","bağ",
+    "samband","koppling","relation","förbind"
+  ],
+
+  "similarityStopwords": [
+    "the","a","an","and","or","but","is","are","was","were","be","been","being",
+    "have","has","had","do","does","did","i","you","he","she","it","we","they",
+    "me","him","her","them","my","your","his","their","this","that","these","those",
+    "of","in","on","at","to","for","with","by","as","what","which","who","how","why",
+    "when","where","can","could","would","should","will","about","tell","give","show"
+  ]
+}

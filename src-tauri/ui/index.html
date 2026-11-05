@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Strict CSP for the bundled splash. It is a self-contained static page (inline style + inline SVG, no
+       scripts, no network), so lock it all the way down: no scripts, no external loads, no framing or form
+       posts. The real app is served by the local server with its own nonce CSP once the shell navigates away.
+       (Tauri's injected CSP is disabled in tauri.conf.json, so this meta is the splash's only policy.) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lokyni</title>
+  <style>
+    /* Shown only for the moment between launch and the server being ready, after which the
+       shell navigates this window to the running app. Kept self-contained (no external
+       assets) so it paints instantly. */
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #0f0f0f; color: #e2e2e2;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .mark { width: 64px; height: 64px; display: block; }
+    .name { margin-top: 16px; font-size: 15px; letter-spacing: 0.04em; color: #8a8a8a; }
+    .status { margin-top: 22px; font-size: 13px; color: #8a8a8a; }
+    .dots::after { content: ""; animation: dots 1.4s steps(4, end) infinite; }
+    @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+    @media (prefers-color-scheme: light) {
+      body { background: #f0f0ee; color: #1a1a1a; }
+      .name, .status { color: #666; }
+    }
+  </style>
+</head>
+<body>
+  <svg class="mark" viewBox="0 0 100 100" width="64" height="64" role="img" aria-label="Lokyni">
+    <rect width="100" height="100" rx="22" fill="#0f0f0f"/>
+    <path d="M50 16 L84 50 L50 84 L16 50 Z" fill="#4f8ef7"/>
+    <path d="M50 30 L70 50 L50 70 L30 50 Z" fill="#0f0f0f"/>
+    <path d="M50 42.5 L57.5 50 L50 57.5 L42.5 50 Z" fill="#4f8ef7"/>
+  </svg>
+  <div class="name">Lokyni</div>
+  <div class="status">Starting<span class="dots"></span></div>
+</body>
+</html>

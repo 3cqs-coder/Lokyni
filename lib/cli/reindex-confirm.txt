@@ -1,0 +1,4 @@
+⚠️  --reindex will WIPE the search index and rebuild it from scratch,
+   re-reading and re-OCRing every document. This can take a long time.
+   Your documents are not modified — only the index Lokyni builds.
+   Type "yes" to continue:

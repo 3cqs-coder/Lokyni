@@ -1,0 +1,29 @@
+[package]
+name = "lokyni-shell"
+# Not the app version. The shipped version comes from the root package.json through tauri.conf.json's
+# "version": "../package.json"; Cargo cannot read JSON, so this stays a fixed placeholder rather than a second
+# release literal. Tauri uses the package.json version for the bundle, installer metadata, and Windows resources.
+version = "0.0.0"
+description = "Lokyni desktop shell"
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-opener = "2"
+url = "2"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

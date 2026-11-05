@@ -1,0 +1,36 @@
+# Dependencies — versions resolve from package.json ranges at install time, so the
+# lockfile is not tracked (consistent across these projects).
+node_modules/
+package-lock.json
+
+# Data — documents and vector index are local, not versioned. Anchored to the repo root
+# so it ignores the user-data dir only, NOT lib/ai/data/ (shipped prompt text — code).
+/data/
+
+# Environment and secrets — config/config.json holds the user's live settings (provider, models,
+# API keys, indexed folders), written by the Settings UI, so it is never tracked. The app's
+# built-in defaults apply when it is absent; the tracked, secret-free config/config.json.default is
+# a human-readable template you can copy to config/config.json to start from.
+/config/config.json
+# The multi-user sign-in/CSRF secret — generated on first use, must never be committed.
+/config/session-secret
+# Optional local-only override for the docs-hygiene name check; not part of the published tree.
+/config/blocked-names.local.json
+.env
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime
+*.pid
+
+# Browser-test artifacts (failure screenshots)
+test-results/
+
+# Under docs/, track only README.md; everything else there stays local.
+/docs/*
+!/docs/README.md
