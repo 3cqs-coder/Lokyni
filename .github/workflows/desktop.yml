@@ -30,6 +30,13 @@ on:
         # changed. Enter a tag only when you intend to publish (or replace) that release's assets.
         description: 'Release tag to publish to (e.g. 1.0.0). Leave blank to build installers only, no release.'
         required: false
+      build_only:
+        # An explicit, unmistakable build-only switch. When checked, the release job is skipped no matter what
+        # the tag says, so a run can never publish or overwrite a release by accident. The installers are still
+        # built on all three platforms and uploaded as run artifacts. This overrides release_tag.
+        description: 'Build the installers only — never create or update any release (overrides the tag).'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -180,8 +187,8 @@ jobs:
             TAG="${GITHUB_REF_NAME}"
           fi
           TAG="${TAG#v}"   # tolerate an optional leading v on the tag
-          if [ -z "$TAG" ]; then
-            echo "Build-only run (no release tag) — skipping the version match; installers upload as run artifacts, no release is made."
+          if [ "${{ github.event.inputs.build_only }}" = "true" ] || [ -z "$TAG" ]; then
+            echo "Build-only run (no release) — skipping the version match; installers upload as run artifacts, no release is made."
             exit 0
           fi
           if [ "$PKG" != "$TAG" ]; then
@@ -292,7 +299,9 @@ jobs:
   # release rather than creating duplicates.
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.release_tag != ''
+    # Run only when there is a release to make: a version-tag push, or a manual run with a non-blank tag. A manual
+    # run with "build only" checked (or a blank tag) never reaches here, so it can't publish or overwrite a release.
+    if: (github.event_name != 'workflow_dispatch' || github.event.inputs.build_only != 'true') && (startsWith(github.ref, 'refs/tags/') || github.event.inputs.release_tag != '')
     runs-on: ubuntu-latest
     permissions:
       contents: write
