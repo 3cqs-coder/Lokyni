@@ -416,10 +416,14 @@ fn main() {
             // navigation handler. The app is a single webview pointed at the local server, so an
             // outbound link followed IN PLACE would navigate away from the app with no way back,
             // and a target="_blank" link does nothing in the desktop webview. The handler keeps
-            // in-app origins (the bundled loading page on tauri://, and the local server on
-            // 127.0.0.1) in the window and hands every other URL to the OS default browser,
-            // canceling the in-webview navigation. The frontend rewrites target="_blank" links to
-            // top-level navigations in desktop mode so they reach this handler too.
+            // in-app origins in the window and hands every other URL to the OS default browser,
+            // canceling the in-webview navigation. In-app origins are the bundled splash/loader —
+            // served by the webview ITSELF, as the `tauri://` scheme on macOS/Linux (WKWebView) or an
+            // `*.localhost` host (`tauri.localhost`) on Windows (WebView2) — plus the local server on
+            // 127.0.0.1 / localhost. (Missing the Windows `tauri.localhost` host sent the very first
+            // splash load to the system browser, leaving the window blank and popping open a browser.)
+            // The frontend rewrites target="_blank" links to top-level navigations in desktop mode so
+            // they reach this handler too.
             let nav_handle = app.handle().clone();
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Lokyni")
@@ -431,7 +435,7 @@ fn main() {
                     let host = url.host_str().unwrap_or("");
                     let in_app = url.scheme() == "tauri"
                         || ((url.scheme() == "http" || url.scheme() == "https")
-                            && (host == "127.0.0.1" || host == "localhost"));
+                            && (host == "127.0.0.1" || host == "localhost" || host.ends_with(".localhost")));
                     if in_app {
                         return true;
                     }

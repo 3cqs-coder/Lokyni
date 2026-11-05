@@ -2383,9 +2383,11 @@ details.eval-qrow[open] > summary::before { content: '▾'; }
 }
 .faith-line.faith-un .faith-tag { background: var(--warn-bg); color: var(--error); }
 
-/* Hardware-aware model suggestions (Settings → Provider). Uses theme tokens so it
-   adapts to dark/light/sepia like the rest of the panel. */
-#cfg-suggest-models {
+/* Secondary action buttons in Settings → Provider (the hardware-aware "Suggest models" button and
+   the "Will this re-embed?" pre-switch check). One shared style so they match and neither falls back
+   to the raw browser/WebView2 button box. Uses theme tokens so it adapts to dark/light/sepia. */
+#cfg-suggest-models,
+#predict-switch-btn {
   font-family: var(--font-mono);
   font-size: 12px;
   background: none;
@@ -2397,7 +2399,8 @@ details.eval-qrow[open] > summary::before { content: '▾'; }
   transition: border-color 0.15s, color 0.15s;
   display: inline-flex; align-items: center; gap: 6px;
 }
-#cfg-suggest-models:hover { border-color: var(--accent); color: var(--accent); }
+#cfg-suggest-models:hover,
+#predict-switch-btn:hover { border-color: var(--accent); color: var(--accent); }
 #cfg-model-suggestions { display: block; flex-direction: column; gap: 6px; }
 /* The ID rule above (specificity 1,0,0) outranks the shared `.hidden` class, so without this guard the
    suggestions box would show as an empty block before "Suggest models" is clicked, and JS could never
