@@ -288,6 +288,9 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   shutdown.register('late-interaction worker', async () => {
     require('./lib/retrieval/colbert').shutdownColbert();
   }, () => { try { require('./lib/retrieval/colbert').shutdownColbert(); } catch {} });
+  shutdown.register('local-embedder worker', async () => {
+    require('./lib/retrieval/localembed').shutdown();
+  }, () => { try { require('./lib/retrieval/localembed').shutdown(); } catch {} });
   shutdown.register('parse worker', async () => {
     require('./lib/indexing/parseworker').shutdownParseWorker();
   }, () => { try { require('./lib/indexing/parseworker').shutdownParseWorker(); } catch {} });

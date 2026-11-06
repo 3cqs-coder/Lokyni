@@ -1,6 +1,7 @@
 {
   "provider": "ollama",
   "model": "llama3.2",
+  "embeddingsProvider": "local",
   "embeddingsModel": "",
   "ollamaHost": "http://localhost:11434",
   "temperature": 0.35,

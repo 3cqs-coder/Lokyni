@@ -134,20 +134,22 @@ Everything below follows from those three promises:
 
 - Linux, macOS, or Windows based system
 - [Node.js](https://nodejs.org) v22.22 or later (required — Lokyni and its core libraries need Node 22.22+, and it checks your version at startup)
-- A local or remote LLM provider — one of:
+- A language model, to write the answers — one of:
   - [Ollama](https://ollama.com) running locally (recommended for fully private, offline use)
   - An OpenAI-compatible API endpoint
 - 4GB RAM minimum, 8GB or more recommended for larger document sets and local models
 - 1GB disk space minimum, plus room for your documents and the vector index
 - Reliable internet connection only if using a remote provider; none required with a local Ollama model
 
-**NOTE:** Running Lokyni with a local Ollama model keeps everything — your documents, your questions, and the model's answers — entirely on your own machine. Nothing is sent to any third party.
+**Two different jobs — only one needs setup.** Lokyni does two things with a model. It **embeds** your documents (turns them into vectors so they can be searched), and it **writes answers** from the passages it finds. Embedding is handled out of the box by a small **built-in model that runs on your own machine** — no Ollama and no API key, fully offline, and it works in many languages — so your documents become searchable the moment you add them. Writing answers is the part that needs a language model: a local Ollama model, or an OpenAI-compatible API key. In other words, search works with zero setup; to get written answers, connect a language model. You can switch embeddings to Ollama or OpenAI later in Settings if you prefer a different embedding model.
+
+**NOTE:** Running Lokyni with a local Ollama model keeps everything — your documents, your questions, and the model's answers — entirely on your own machine. Nothing is sent to any third party. The built-in embedder is local too: it downloads once, then runs offline.
 
 ## How It Works
 
 Lokyni turns a folder of documents into a searchable knowledge base and answers questions against it:
 
-1. **Indexing** — Documents you add are split into overlapping semantic chunks. Each chunk is embedded into a vector using your embeddings model and stored in a FAISS index. A BM25 keyword index and a TF-IDF term table are built alongside it.
+1. **Indexing** — Documents you add are split into overlapping semantic chunks. Each chunk is embedded into a vector using your embeddings model (the built-in local model by default, so no external service is involved) and stored in a FAISS index. A BM25 keyword index and a TF-IDF term table are built alongside it.
 
 2. **Retrieval** — When you ask a question, Lokyni runs both a dense vector search (FAISS, semantic similarity) and a keyword search (BM25, exact term matching), then fuses the two result sets using Reciprocal Rank Fusion (RRF). An optional cross-encoder reranker re-scores the top candidates for precision.
 
@@ -158,6 +160,7 @@ Lokyni turns a folder of documents into a searchable knowledge base and answers 
 Everything runs locally. Outbound network calls are limited to a few predictable cases:
 
 - Calls to your chosen LLM provider. There are none if that provider is a local Ollama instance.
+- A one-time model download for the built-in local embedder (about 110 MB), the first time documents are indexed. This is the default; it does not happen if you switch embeddings to Ollama or OpenAI.
 - A one-time model download for the reranker.
 - A one-time language-data download the first time OCR reads a scanned document.
 - A one-time voice-model download the first time an answer is read aloud or a question is asked by voice. This happens only if you turn those features on.
@@ -173,25 +176,24 @@ Once you have met all the requirements, follow these steps to install Lokyni:
 2. Change directory to where the Lokyni files are located
 3. Type: `npm install`
 4. Wait for all packages to download and install
-5. Make sure your LLM provider is available:
-   - For **Ollama**, install it from [ollama.com](https://ollama.com), then pull the models you intend to use, for example:
+5. Make sure a language model is available to write the answers (embedding needs no setup — the built-in local embedder handles it):
+   - For **Ollama**, install it from [ollama.com](https://ollama.com), then pull a chat model, for example:
      ```
      ollama pull llama3.2
-     ollama pull bge-m3
      ```
-     (`bge-m3` is the default embedding model — multilingual and open (self-hostable on any OpenAI-compatible host, not locked to one vendor), and about a 1.2 GB download. On a memory-tight machine you can use the lighter `nomic-embed-text` (about 270 MB) instead; the Settings "Suggest models" picker recommends by your available memory.)
+     (You do **not** need to pull an embedding model: documents are embedded by the built-in local model by default. If you would rather embed with Ollama, set the embeddings provider to Ollama in Settings and pull `bge-m3` — multilingual and open, about a 1.2 GB download — or the lighter `nomic-embed-text` (about 270 MB) on a memory-tight machine. The Settings "Suggest models" picker recommends by your available memory.)
    - For an **OpenAI-compatible** provider, have your API key ready (see [Configuration](#configuration))
 6. The built-in defaults already work as-is for a standard local Ollama setup (using
-   `llama3.2` and `bge-m3`). To change models or use an OpenAI-compatible
-   provider, copy `config/config.json.default` to `config/config.json` and edit it (see
-   [Configuration](#configuration)).
+   `llama3.2` for chat and the built-in local embedder). To change models, embed with Ollama
+   or OpenAI, or use an OpenAI-compatible chat provider, copy `config/config.json.default` to
+   `config/config.json` and edit it (see [Configuration](#configuration)).
 7. Type: `npm start`
    - You can also use `node lokyni.js debug` to print detailed retrieval diagnostics to the console, which is useful when tuning or troubleshooting
    - Run it from the Lokyni directory. Lokyni keeps its `config/` and `data/` folders next to where it is started, so `npm start` (or `node lokyni.js` from that folder) finds them. Starting it from somewhere else would look for those folders in the current directory instead. The background, service, Docker, and desktop-app setups all handle this for you.
 8. Open a web browser and go to: http://127.0.0.1:7887
 9. Add your documents through the web interface (see [Adding Documents](#adding-documents)) and start asking questions
 
-On first start, if no model provider is reachable, Lokyni shows a connect screen that walks you through pointing it at Ollama or an OpenAI-compatible provider, so you don't have to edit `config.json` by hand. For a local Ollama it lists the models you already have installed, so you pick one from a dropdown instead of typing its name. If you don't have local AI hardware, choose OpenAI on that screen — it works on any computer and needs only an API key.
+On first start, if no language model is reachable, Lokyni shows a connect screen that walks you through pointing it at Ollama or an OpenAI-compatible provider, so you don't have to edit `config.json` by hand. For a local Ollama it lists the models you already have installed, so you pick one from a dropdown instead of typing its name. If you don't have local AI hardware, choose OpenAI on that screen — it works on any computer and needs only an API key. (Your documents are still indexed and searchable without this — embedding is handled by the built-in local model — but writing answers needs a language model.)
 
 On first start, Lokyni builds the vector index from any documents already present in `data/documents`. Subsequent starts load the cached index and only re-index files that changed.
 
@@ -439,16 +441,17 @@ To start it:
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-The first time, pull the two default models into the bundled Ollama:
+The first time, pull a chat model into the bundled Ollama (embedding is handled by the built-in local model, so no embedding model is required):
 
 ```bash
 docker compose -f docker/docker-compose.yml exec ollama ollama pull llama3.2
-docker compose -f docker/docker-compose.yml exec ollama ollama pull bge-m3
 ```
+
+(To embed with Ollama instead of the built-in local model, set the embeddings provider to Ollama in Settings and also `ollama pull bge-m3`.)
 
 Then open http://127.0.0.1:7887 and add your documents.
 
-**What persists.** One named volume (`lokyni-state`) holds everything Lokyni keeps: your configuration, the document index, your workspaces, saved conversations, and anything Lokyni downloads on demand — the reranker model, the voice models (read-aloud and voice input), and the media decoder used to transcribe audio and video. A second volume holds the models the bundled Ollama pulls. Upgrading the image leaves both untouched.
+**What persists.** One named volume (`lokyni-state`) holds everything Lokyni keeps: your configuration, the document index, your workspaces, saved conversations, and anything Lokyni downloads on demand — the built-in embedding model, the reranker model, the voice models (read-aloud and voice input), and the media decoder used to transcribe audio and video. A second volume holds the models the bundled Ollama pulls. Upgrading the image leaves both untouched.
 
 **Indexing folders from the host.** The container cannot see your host folders unless you mount them. To index documents that live on the host, mount each folder read-only in the Compose file, then add it under Documents → Indexed folders using its path inside the container:
 
