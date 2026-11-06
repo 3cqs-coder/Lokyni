@@ -1237,7 +1237,8 @@ A few settings can be passed on the command line, which overrides `config.json` 
 - `--port <n>` — the port the web interface listens on. Defaults to `7887`.
 - `--bind <address>` — the address the server binds to. Defaults to `127.0.0.1`. Set it to `0.0.0.0` only to reach Lokyni from other machines, and see the security note in [Docker](#docker) and [Reverse Proxy Setup](#reverse-proxy-setup).
 - `--ollama-host <url>` — the Ollama base URL. Defaults to `http://localhost:11434`.
-- `--data-dir <path>` — where Lokyni keeps its data (workspaces, the index, API keys, the reranker model). Defaults to a `data` folder in the working directory. Set it to keep the data in a fixed location regardless of where Lokyni is started from.
+- `--data-dir <path>` — where Lokyni keeps its data (workspaces, the index, API keys, the reranker model). Defaults to a `data` folder in the working directory. Set it to keep the data in a fixed location regardless of where Lokyni is started from. When you set this, the `config` folder and the running instance's pid file move with it, so config, data, and process state stay together no matter the working directory.
+- `--config-dir <path>` — where `config.json` and its template live. Defaults to a `config` folder beside the data directory (or in the working directory when `--data-dir` is not set). Set it to point several instances at one shared configuration, or to separate configuration from data.
 - `--enforce-host-guard` — keep the DNS-rebinding Host guard active even when bound to `0.0.0.0`. Only loopback and any configured `trustedHosts` are then accepted. The Docker image sets this, because a container must bind `0.0.0.0` for its published port to work.
 - `--dns-order <order>` — the DNS result order: `ipv4first`, `ipv6first`, or `verbatim`.
 
