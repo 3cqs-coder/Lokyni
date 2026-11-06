@@ -141,7 +141,7 @@ Everything below follows from those three promises:
 - 1GB disk space minimum, plus room for your documents and the vector index
 - Reliable internet connection only if using a remote provider; none required with a local Ollama model
 
-**Two different jobs — only one needs setup.** Lokyni does two things with a model. It **embeds** your documents (turns them into vectors so they can be searched), and it **writes answers** from the passages it finds. Embedding is handled out of the box by a small **built-in model that runs on your own machine** — no Ollama and no API key, fully offline, and it works in many languages — so your documents become searchable the moment you add them. Writing answers is the part that needs a language model: a local Ollama model, or an OpenAI-compatible API key. In other words, search works with zero setup; to get written answers, connect a language model. You can switch embeddings to Ollama or OpenAI later in Settings if you prefer a different embedding model.
+**Two different jobs — only one needs setup.** Lokyni does two things with a model. It **embeds** your documents (turns them into vectors so they can be searched), and it **writes answers** from the passages it finds. Embedding is handled out of the box by a **built-in model that runs on your own machine** — no Ollama and no API key, fully offline, and it works in many languages — so your documents become searchable the moment you add them. (It downloads once, about 600 MB; a lighter, faster model is one setting away if you prefer.) Writing answers is the part that needs a language model: a local Ollama model, or an OpenAI-compatible API key. In other words, search works with zero setup; to get written answers, connect a language model. You can switch embeddings to Ollama or OpenAI later in Settings if you prefer a different embedding model.
 
 **NOTE:** Running Lokyni with a local Ollama model keeps everything — your documents, your questions, and the model's answers — entirely on your own machine. Nothing is sent to any third party. The built-in embedder is local too: it downloads once, then runs offline.
 
@@ -160,7 +160,7 @@ Lokyni turns a folder of documents into a searchable knowledge base and answers 
 Everything runs locally. Outbound network calls are limited to a few predictable cases:
 
 - Calls to your chosen LLM provider. There are none if that provider is a local Ollama instance.
-- A one-time model download for the built-in local embedder (about 110 MB), the first time documents are indexed. This is the default; it does not happen if you switch embeddings to Ollama or OpenAI.
+- A one-time model download for the built-in local embedder (about 600 MB), the first time documents are indexed. This is the default; it does not happen if you switch embeddings to Ollama or OpenAI, and a lighter embedding model can be selected in Settings.
 - A one-time model download for the reranker.
 - A one-time language-data download the first time OCR reads a scanned document.
 - A one-time voice-model download the first time an answer is read aloud or a question is asked by voice. This happens only if you turn those features on.
