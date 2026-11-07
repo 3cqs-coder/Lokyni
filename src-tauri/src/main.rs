@@ -299,16 +299,24 @@ fn stop_server(app: &tauri::AppHandle) {
 fn ingest_dropped(app: &tauri::AppHandle, paths: &[std::path::PathBuf]) {
     let joined = paths.iter().filter_map(|p| p.to_str()).collect::<Vec<_>>().join("\t");
     if joined.is_empty() { return; }
-    if let Some(state) = app.try_state::<Server>() {
-        let mut guard = state.0.lock().unwrap();
-        if let Some((child, _)) = guard.as_mut() {
-            if let Some(stdin) = child.stdin.as_mut() {
-                use std::io::Write;
-                let _ = stdin.write_all(format!("ingest\t{}\n", joined).as_bytes());
-                let _ = stdin.flush();
+    // Do the pipe write OFF the window-event (UI) thread. A realistic drop is a few KB and fits the OS pipe
+    // buffer, so the write returns instantly — but a very large drop to a sidecar that is wedged (not draining its
+    // stdin) could otherwise block write_all on the UI thread while holding the Server lock, freezing the window.
+    // A detached thread keeps the window responsive; the sidecar reads stdin continuously, so in the normal case
+    // the thread finishes immediately.
+    let app = app.clone();
+    std::thread::spawn(move || {
+        if let Some(state) = app.try_state::<Server>() {
+            let mut guard = state.0.lock().unwrap();
+            if let Some((child, _)) = guard.as_mut() {
+                if let Some(stdin) = child.stdin.as_mut() {
+                    use std::io::Write;
+                    let _ = stdin.write_all(format!("ingest\t{}\n", joined).as_bytes());
+                    let _ = stdin.flush();
+                }
             }
         }
-    }
+    });
 }
 
 // If the server is busy (indexing/answering), ask before quitting. Returns true when the user chose "Keep

@@ -404,6 +404,11 @@ const startServer = async ({ forceRebuild = false } = {}) => {
     // but on Windows maps to an abrupt TerminateProcess that runs no shutdown handler — so the
     // end-of-session cache flushes would be lost and workers left dangling on a normal quit.
     const stop = () => { try { shutdown.gracefulExit('desktop stop', 0); } catch { process.exit(0); } };
+    // Decode stdin as UTF-8 at the stream level so its StringDecoder spans chunk boundaries — a drag-drop "ingest"
+    // line can carry non-ASCII paths (accented or CJK filenames), and a multi-byte character split across two pipe
+    // reads would otherwise decode to U+FFFD on each half and corrupt that path (the file would then silently fail
+    // to ingest). "quit" is pure ASCII, so the cooperative stop is unaffected either way.
+    try { process.stdin.setEncoding('utf8'); } catch { /* fall back to default decoding */ }
     let buf = '';
     process.stdin.on('data', (d) => {
       buf += String(d);
@@ -421,9 +426,11 @@ const startServer = async ({ forceRebuild = false } = {}) => {
           try { require('./lib/desktopdrop').ingestLocalPaths(paths).catch(() => {}); } catch {}
         }
       }
-      // Bounded so unexpected input can't grow it, but large enough to hold a tab-joined list of absolute paths
-      // (a "quit" line is tiny; an ingest line can be long). The tail keeps a partially received final line.
-      if (buf.length > 16384) buf = buf.slice(-16384);
+      // Bounded so stray input without a newline can't grow the buffer without limit, but generous enough to
+      // hold ONE ingest line carrying a large multi-file drop (a selection of hundreds of files tab-joined). A
+      // "quit" line is tiny; a 1 MB ceiling fits several thousand absolute paths, far past any real drag-drop,
+      // while still capping a pathological stream. The tail keeps a partially received final line intact.
+      if (buf.length > 1048576) buf = buf.slice(-1048576);
     });
     process.stdin.on('end', stop);        // the app's pipe end closed — it exited by some means
     process.stdin.on('error', () => {});  // a broken stdin pipe must never crash the long-running server
