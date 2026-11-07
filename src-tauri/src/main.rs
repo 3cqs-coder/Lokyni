@@ -24,7 +24,7 @@ use std::time::Duration;
 // Where the panic hook writes. Set once the per-user data dir is resolved; until then (and if that fails) the
 // hook falls back to the temp dir, so even a panic during early startup leaves a trace.
 static PANIC_LOG_DIR: OnceLock<PathBuf> = OnceLock::new();
-use tauri::{Manager, RunEvent, WindowEvent, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, RunEvent, WindowEvent, WebviewUrl, WebviewWindowBuilder, DragDropEvent};
 use tauri::webview::DownloadEvent;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_opener::OpenerExt;
@@ -291,6 +291,26 @@ fn stop_server(app: &tauri::AppHandle) {
     }
 }
 
+// Hand the paths of files dropped on the window to the sidecar over its private stdin pipe (the same trusted
+// channel as the "quit" line — no webview IPC and no new network endpoint, so a web page can't reach it). The
+// sidecar copies each supported file into the active workspace and reindexes. One line per drop: `ingest\t` then
+// the absolute paths tab-separated. Filenames virtually never contain a tab; a stray one would only split a name,
+// never cross into another file, and the sidecar validates every path before touching it.
+fn ingest_dropped(app: &tauri::AppHandle, paths: &[std::path::PathBuf]) {
+    let joined = paths.iter().filter_map(|p| p.to_str()).collect::<Vec<_>>().join("\t");
+    if joined.is_empty() { return; }
+    if let Some(state) = app.try_state::<Server>() {
+        let mut guard = state.0.lock().unwrap();
+        if let Some((child, _)) = guard.as_mut() {
+            if let Some(stdin) = child.stdin.as_mut() {
+                use std::io::Write;
+                let _ = stdin.write_all(format!("ingest\t{}\n", joined).as_bytes());
+                let _ = stdin.flush();
+            }
+        }
+    }
+}
+
 // If the server is busy (indexing/answering), ask before quitting. Returns true when the user chose "Keep
 // working" (i.e. cancel the quit). Shared by the window-close path AND the macOS Cmd+Q / app-menu Quit path
 // (RunEvent::ExitRequested), so both honor the confirmation — a window-close-only guard let Cmd+Q abort
@@ -442,7 +462,12 @@ fn main() {
                 .inner_size(1200.0, 820.0)
                 .min_inner_size(900.0, 600.0)
                 .background_color(tauri::window::Color(0x0f, 0x0f, 0x0f, 0xff))
-                .disable_drag_drop_handler()
+                // NOTE: the native OS drag-drop handler is intentionally LEFT ENABLED (we do not call
+                // disable_drag_drop_handler). On Linux, recent WebKitGTK no longer exposes dropped files to the
+                // webview's HTML5 dataTransfer (a deliberate WebKit security change — CVE-2025-13947), so relying
+                // on the page's DOM drop silently delivers zero files. Instead we take the drop natively below
+                // (WindowEvent::DragDrop) on every platform and hand the paths to the sidecar; keeping the handler
+                // enabled also stops the webview from navigating away to the dropped file.
                 .on_navigation(move |url| {
                     let host = url.host_str().unwrap_or("");
                     let in_app = url.scheme() == "tauri"
@@ -698,6 +723,13 @@ fn main() {
                 // makes all three deterministic. It runs only when actually quitting: a "Keep working"
                 // choice above returns before reaching this point.
                 app.exit(0);
+            }
+            // Files dropped on the window: hand their absolute paths to the sidecar over the private stdin pipe
+            // (the same channel as "quit"), which copies the supported ones into the active workspace and
+            // reindexes — exactly like an upload. Handled natively here because the webview's HTML5 drop can't be
+            // trusted to carry the files on Linux (see the note on the window builder above).
+            if let WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) = event {
+                ingest_dropped(window.app_handle(), paths);
             }
         })
         .build(tauri::generate_context!())

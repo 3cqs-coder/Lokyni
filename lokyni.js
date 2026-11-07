@@ -407,10 +407,23 @@ const startServer = async ({ forceRebuild = false } = {}) => {
     let buf = '';
     process.stdin.on('data', (d) => {
       buf += String(d);
-      // Match a whole "quit" LINE, buffered across chunks so a split delivery ("qu" + "it\n") still
-      // triggers and a stray byte can't mis-fire it. Bounded so unexpected input can't grow it.
-      let nl; while ((nl = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1); if (line === 'quit') return stop(); }
-      if (buf.length > 64) buf = buf.slice(-64);
+      // Match a whole LINE, buffered across chunks so a split delivery ("qu" + "it\n") still triggers and a stray
+      // byte can't mis-fire it. Two commands from the desktop shell: a bare "quit" (cooperative stop), and
+      // "ingest\t<abs path>\t<abs path>…" (files dropped on the window — copy them into the active workspace and
+      // reindex). Drops are handled HERE, over this private pipe, because recent WebKitGTK no longer exposes
+      // dropped files to the webview's HTML5 dataTransfer on Linux. Fire-and-forget: a bad drop must never affect
+      // the stdin watch or the server.
+      let nl; while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+        if (line.trim() === 'quit') return stop();
+        if (line.startsWith('ingest\t')) {
+          const paths = line.slice('ingest\t'.length).split('\t').filter(Boolean);
+          try { require('./lib/desktopdrop').ingestLocalPaths(paths).catch(() => {}); } catch {}
+        }
+      }
+      // Bounded so unexpected input can't grow it, but large enough to hold a tab-joined list of absolute paths
+      // (a "quit" line is tiny; an ingest line can be long). The tail keeps a partially received final line.
+      if (buf.length > 16384) buf = buf.slice(-16384);
     });
     process.stdin.on('end', stop);        // the app's pipe end closed — it exited by some means
     process.stdin.on('error', () => {});  // a broken stdin pipe must never crash the long-running server
