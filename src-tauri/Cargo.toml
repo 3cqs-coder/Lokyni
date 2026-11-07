@@ -14,12 +14,17 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
-tauri-plugin-single-instance = "2"
 tauri-plugin-opener = "2"
 url = "2"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+# Single-instance focus-the-open-window on macOS + Windows only. Not built on Linux: the plugin registers the app
+# identifier as a D-Bus well-known name there, and D-Bus rejects a segment that starts with a digit (this app's
+# identifier has one), so it would panic at startup. See the matching cfg gate in src/main.rs.
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = "2"
 
 [profile.release]
 codegen-units = 1

@@ -394,17 +394,24 @@ fn main() {
     // renderer choice is in effect for the very first paint — including the loading splash.
     tune_linux_webview();
 
-    tauri::Builder::default()
-        // Single instance: a second launch must NOT start another app + sidecar (which would put
-        // two servers on one data directory). Instead, focus the window that is already open. Must
-        // be the first plugin registered. Cross-platform.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(win) = app.webview_windows().values().next() {
-                let _ = win.unminimize();
-                let _ = win.show();
-                let _ = win.set_focus();
-            }
-        }))
+    let builder = tauri::Builder::default();
+    // Single instance (macOS + Windows): a second launch must NOT start another app + sidecar (which would put
+    // two servers on one data directory). Instead, focus the window that is already open. Registered first, as the
+    // plugin requires. NOT registered on Linux: there the plugin registers the app IDENTIFIER as a D-Bus
+    // well-known name, and D-Bus rejects any name whose dotted segment starts with a digit — this app's identifier
+    // has one ("com.3cqs.lokyni"), so the plugin panics at startup before any window opens. The sidecar's own
+    // per-data-dir lock already stops two servers on one data dir, so Linux data stays safe without this plugin; a
+    // second Linux launch simply opens a second window that then exits. (Changing the identifier would fix D-Bus
+    // too, but it also names the data directory on every platform, so it is deliberately left alone here.)
+    #[cfg(not(target_os = "linux"))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        if let Some(win) = app.webview_windows().values().next() {
+            let _ = win.unminimize();
+            let _ = win.show();
+            let _ = win.set_focus();
+        }
+    }));
+    builder
         .plugin(tauri_plugin_dialog::init())
         // Opens external links (and mailto:, etc.) in the user's real browser/mail client. Called
         // only from Rust (the navigation handler below), so it needs no capability grant to the
