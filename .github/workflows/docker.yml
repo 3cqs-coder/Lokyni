@@ -35,10 +35,13 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/lokyni
+  # The Node that runs the integrity gate. Declared as NODE_VERSION (not an inline literal) so version-drift.test.js
+  # holds it to the same pin as the desktop workflow and the Dockerfile bases — one source, no silent rot.
+  NODE_VERSION: '24.11.1'
 
 jobs:
-  # ── Build each architecture on its OWN native runner. On a release this pushes each arch by digest (no tag yet);
-  #    on a branch/PR it loads the single-arch image locally and exercises it. No QEMU anywhere. ──
+  # ── Build each architecture on its OWN native runner, and on every run load it and prove it starts/serves. On a
+  #    release it then also pushes each arch by digest (no tag yet); the merge job assembles the manifest. No QEMU. ──
   build:
     strategy:
       fail-fast: false
@@ -54,7 +57,8 @@ jobs:
     permissions:
       contents: read
       packages: write          # push the per-arch digest to ghcr (publish path only)
-      id-token: write          # reserved for keyless signing on the publish path
+      # No id-token here: this job signs nothing. The SBOM and provenance are BuildKit-embedded (no GitHub OIDC),
+      # and the keyless cosign signing + attestation live on the merge job, which has id-token/attestations.
     steps:
       - uses: actions/checkout@v4
 
@@ -63,7 +67,7 @@ jobs:
       # port. Cheap, so it runs on both arch legs before anything is built.
       - uses: actions/setup-node@v4
         with:
-          node-version: '24.11.1'
+          node-version: ${{ env.NODE_VERSION }}
       - name: Verify the Docker config has not drifted
         run: node lib/test/unit/docker-config-drift.test.js
 
@@ -83,13 +87,14 @@ jobs:
         id: name
         run: echo "image=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      # ── Build-only path (branch / PR / build-only dispatch): load this arch's image and prove it works. ──
+      # ── Always exercise this arch's image, on every run INCLUDING a publish: build it natively, load it into the
+      #    daemon, and prove it actually starts and serves — so a tag can never push an image that was never run
+      #    (a runtime-only regression, e.g. an arch-specific native-addon load failure, fails here, not in users'
+      #    hands). The publish path below then pushes by digest, reusing this build's buildx layer cache. ──
       - name: Validate the compose file
-        if: steps.publish.outputs.push != 'true'
         run: docker compose -f docker/docker-compose.yml config --quiet
 
       - name: Build this architecture and load it
-        if: steps.publish.outputs.push != 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -99,7 +104,6 @@ jobs:
           tags: lokyni:ci
 
       - name: Start with a writable state volume and reach /status
-        if: steps.publish.outputs.push != 'true'
         run: |
           docker run -d --name lokyni-ci \
             --tmpfs /state:size=768m,uid=1000,gid=1000 \
@@ -121,7 +125,6 @@ jobs:
           docker rm -f lokyni-ci
 
       - name: Refuse a read-only state mount with guidance
-        if: steps.publish.outputs.push != 'true'
         run: |
           mkdir -p "$RUNNER_TEMP/lokyni-readonly"
           set +e
@@ -134,7 +137,9 @@ jobs:
           test "$code" -ne 0
           grep -q "cannot write to its data directory" "$RUNNER_TEMP/lokyni-readonly.log"
 
-      # ── Publish path: build this arch and push it BY DIGEST (no tag yet — the merge job assembles the tags). ──
+      # ── Publish path: push this (already-built, already-exercised) arch BY DIGEST — no tag yet, the merge job
+      #    assembles the tags. buildx reuses the layer cache from the load build above, so this re-build is a cache
+      #    hit, not a second full compile. ──
       - name: Sign in to the container registry
         if: steps.publish.outputs.push == 'true'
         uses: docker/login-action@v3
