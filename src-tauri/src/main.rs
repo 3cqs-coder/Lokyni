@@ -360,6 +360,10 @@ fn show_sidecar_crashed(app: &tauri::AppHandle, data_dir: &Path) {
 //     what fixes the machines where disabling only the DMABUF renderer is not enough. The cost
 //     is a little GPU acceleration, which is irrelevant for this simple document interface.
 //   • __NV_DISABLE_EXPLICIT_SYNC — free, and heads off a related NVIDIA/Wayland crash.
+//   • GTK_OVERLAY_SCROLLING — "0" turns off GTK/WebKitGTK OVERLAY scrollbars, which otherwise float ON TOP of the
+//     page content (a GNOME default). Overlaid scrollbars were covering the right-aligned controls in scrolling
+//     panels (the Settings toggles), making them unclickable. With overlay off, the scrollbar takes its own
+//     track beside the content, so nothing is covered. WebKitGTK reads this from the environment only.
 // Linux-only, so macOS (WKWebView) and Windows (WebView2) are untouched. Each is set only when
 // the user has not already set it, so anyone on a working accelerated path can opt back in.
 #[cfg(target_os = "linux")]
@@ -368,6 +372,7 @@ fn tune_linux_webview() {
         ("WEBKIT_DISABLE_DMABUF_RENDERER", "1"),
         ("WEBKIT_DISABLE_COMPOSITING_MODE", "1"),
         ("__NV_DISABLE_EXPLICIT_SYNC", "1"),
+        ("GTK_OVERLAY_SCROLLING", "0"),
     ] {
         if std::env::var_os(key).is_none() {
             std::env::set_var(key, value);
