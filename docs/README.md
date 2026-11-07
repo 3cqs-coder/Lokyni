@@ -1863,7 +1863,9 @@ removed that shortcut for apps signed this way, so use **Open Anyway**.)
 
 **First launch on Windows.** The installers are unsigned, so Windows SmartScreen may warn that it
 "protected your PC." Choose **More info**, then **Run anyway** to proceed. Linux packages
-(`.deb` / `.rpm`) install normally.
+(`.deb` / `.rpm`) install normally. Each release has both an Intel/AMD (`amd64` / `x86_64`) and an ARM
+(`arm64` / `aarch64`) Linux package, so pick the one that matches your machine — an `amd64` package does
+not install on an ARM machine, and the reverse is also true. The macOS app is Apple Silicon.
 
 Adding a web page by URL tries a plain HTTP fetch first, then renders with a browser engine only when the page needs it. This is the Auto default. **Web page capture** in Settings can force HTTP only, which needs no browser, or Browser only, which always renders. If no browser is installed, plain pages still import, and a page that requires rendering reports that it could not be captured. Live web search and deep research never need a browser engine because they read pages with a plain fetch.
 

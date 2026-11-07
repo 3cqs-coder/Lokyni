@@ -84,7 +84,12 @@ jobs:
           - os: windows-latest
             label: windows
           - os: ubuntu-22.04        # oldest supported base for a wider Linux compatibility floor
-            label: linux
+            label: linux            # amd64 (x86-64) installers
+          # Native arm64 Linux runner — builds the arm64 .deb/.rpm so ARM machines (a Raspberry Pi, an ARM
+          # server, an ARM virtual machine) get an installer that matches their architecture. The native modules
+          # can't cross-compile, so this must build on a real arm64 host, not under emulation.
+          - os: ubuntu-24.04-arm
+            label: linux-arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -128,11 +133,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          # runner.arch is in the key so the amd64 and arm64 Linux legs never share a cache (both are runner.os
+          # "Linux") — a cross-architecture Rust cache would poison the build with objects for the wrong target.
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-cargo-
 
       - name: Install Linux build dependencies
-        if: matrix.label == 'linux'
+        if: startsWith(matrix.label, 'linux')   # both the amd64 and arm64 Linux legs
         run: bash src-tauri/linux-build-deps.sh
 
       # Installs runtime dependencies (native modules build for this OS) plus the desktop
