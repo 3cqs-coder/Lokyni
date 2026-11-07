@@ -892,11 +892,16 @@ body {
    fallback for older engines. A modal capped at plain vh can otherwise run under the mobile toolbar. */
 .settings-box { max-width: 680px; max-height: 85vh; max-height: 85dvh; overflow: hidden; }
 /* Keep the title, save status, and action buttons in view; only the settings body scrolls. */
-/* scrollbar-gutter reserves the scrollbar's track so a CLASSIC scrollbar (Linux WebKitGTK, Windows, or macOS with
-   "always show scrollbars") never sits ON TOP of the right-aligned toggle checkboxes — on Linux the default ~15px
-   scrollbar was covering the Voice & Audio toggles, making them unclickable. It is a no-op for overlay scrollbars
-   (the macOS default), so that layout is unchanged. */
-#settings-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; padding-right: 2px; }
+#settings-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 2px; }
+/* Give the settings body a defined (classic, space-taking) scrollbar instead of the platform default. This is the
+   fix for the right-aligned toggle checkboxes being unclickable on Linux: GNOME/WebKitGTK uses OVERLAY scrollbars
+   that float ON TOP of the content (so scrollbar-gutter alone can't help — a gutter is only reserved for a classic
+   scrollbar). Defining ::-webkit-scrollbar switches WebKit to a styled scrollbar that occupies real width, so the
+   content — and the toggles at the right edge — sit to its LEFT and stay clickable. Same treatment #chat-box and
+   #doc-list-wrap already use; on macOS it means a thin visible track on this panel, which is fine. */
+#settings-body::-webkit-scrollbar { width: 10px; }
+#settings-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+#settings-body::-webkit-scrollbar-track { background: transparent; }
 .settings-box > .modal-title,
 .settings-box > #settings-status,
 .settings-box > .modal-btns { flex: 0 0 auto; }
