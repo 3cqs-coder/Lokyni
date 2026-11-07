@@ -1,10 +1,10 @@
 # Build the Lokyni desktop app for macOS, Windows, and Linux.
 #
-# A branch push or pull request runs the unit suite (all three platforms) and the Docker image
-# check. A version tag — or a manual run (workflow_dispatch), optionally build-only — also builds
-# the native installers on each operating system and (for a tag or a non-blank tag input) attaches
-# them to a release. The browser (e2e) suite is a SEPARATE, on-demand workflow (e2e.yml), so building
-# the desktop app does not drag it along.
+# A branch push or pull request runs the unit suite (all three platforms). A version tag — or a manual run
+# (workflow_dispatch), optionally build-only — also builds the native installers on each operating system and
+# (for a tag or a non-blank tag input) attaches them to a release. The server container image is a SEPARATE
+# workflow (docker.yml), and the browser (e2e) suite is another (e2e.yml), so building the desktop app does not
+# drag either along.
 #
 # The app bundles real native modules (the vector index, the local reranker runtime, image
 # handling), which cannot be cross-compiled, so each installer is built on its own operating
@@ -66,52 +66,10 @@ jobs:
       - name: Run the unit suite
         run: npm run test:unit
 
-  # Build and exercise the server image. A writable state volume must serve /status; a read-only
-  # state mount must fail with the actionable permissions message. The static Docker guards run in
-  # the unit suite; this job proves the image itself starts.
-  docker:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate the compose file
-        run: docker compose -f docker/docker-compose.yml config --quiet
-      - name: Build the image
-        run: docker build -f docker/Dockerfile -t lokyni:ci .
-      - name: Start with a writable state volume
-        run: |
-          docker run -d --name lokyni-ci \
-            --tmpfs /state:size=768m,uid=1000,gid=1000 \
-            --memory 2g \
-            -p 127.0.0.1:17887:7887 \
-            lokyni:ci
-          trap 'docker rm -f lokyni-ci >/dev/null 2>&1 || true' EXIT
-          ready=0
-          for i in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:17887/status >/dev/null; then ready=1; break; fi
-            sleep 2
-          done
-          if [ "$ready" -ne 1 ]; then
-            docker logs lokyni-ci
-            docker rm -f lokyni-ci
-            exit 1
-          fi
-          docker exec lokyni-ci node /app/docker/healthcheck.js
-          docker rm -f lokyni-ci
-      - name: Refuse a read-only state mount with guidance
-        run: |
-          mkdir -p "$RUNNER_TEMP/lokyni-readonly"
-          set +e
-          docker run --rm --name lokyni-ro             -v "$RUNNER_TEMP/lokyni-readonly:/state:ro"             lokyni:ci > "$RUNNER_TEMP/lokyni-readonly.log" 2>&1
-          code=$?
-          set -e
-          cat "$RUNNER_TEMP/lokyni-readonly.log"
-          test "$code" -ne 0
-          grep -q "cannot write to its data directory" "$RUNNER_TEMP/lokyni-readonly.log"
-
-  # Build the installers. Only for a version tag or a manual run. Gated on the unit suite and the
-  # Docker image check; the on-demand e2e suite is not a build gate (it runs via workflow_dispatch).
+  # Build the installers. Only for a version tag or a manual run. Gated on the unit suite; the server image is
+  # built and exercised in its own workflow (docker.yml), and the on-demand e2e suite is not a build gate.
   build:
-    needs: [test, docker]
+    needs: test
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
