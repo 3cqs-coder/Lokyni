@@ -441,6 +441,8 @@ To start it:
 docker compose -f docker/docker-compose.yml up -d
 ```
 
+This builds the image locally for your machine's architecture, so it runs natively on both Intel/AMD (`amd64`) and ARM (`arm64`) hosts — a Raspberry Pi, an ARM server, or an ARM virtual machine. A prebuilt multi-arch image is also published for each release, so you can pull it instead of building: set the service's `image:` to `ghcr.io/3cqs-coder/lokyni:latest` (or a specific version) in the Compose file and remove its `build:` section. The registry serves the matching architecture for your host automatically.
+
 The first time, pull a chat model into the bundled Ollama (embedding is handled by the built-in local model, so no embedding model is required):
 
 ```bash

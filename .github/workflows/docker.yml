@@ -1,15 +1,16 @@
-# Build, exercise, and publish the Lokyni server container image.
+# Build, exercise, and publish the Lokyni server container image as a MULTI-ARCH (amd64 + arm64) image.
 #
-# This mirrors the proven multi-arch image pipeline: standard GitHub-Actions syntax on hosted runners. A push to a
-# branch only BUILDS the image (single-arch, loaded into the runner) and exercises it — it publishes nothing. The
-# publish/sign/attest steps are gated to release tags and an opt-in manual run, so a branch push can never push an
-# image. A published image is MULTI-ARCH (amd64 + arm64), so an ARM host — a Raspberry Pi, an ARM VPS, or an
-# Apple-Silicon VM — gets a native image instead of an incompatible amd64 one (the desktop .deb/.rpm are amd64 only,
-# so the image is the supported ARM-Linux path). The Dockerfile's native modules (faiss-node, onnxruntime-node) ship
-# prebuilt binaries for both arches, and each arch's layer is built under emulation so it fetches its own.
+# WHY NOT QEMU: the image installs native Node addons (faiss-node for the vector index, onnxruntime-node behind the
+# reranker). Building the arm64 image by emulating arm64 on an amd64 runner with QEMU is slow and unreliable for
+# native addons — it stalls for many minutes and then dies. So each architecture is built on its OWN NATIVE runner
+# (amd64 on ubuntu-latest, arm64 on the ubuntu-24.04-arm runner), which is fast and reliable, and a final job merges
+# the two into one multi-arch manifest. This is the standard pattern for a container image with compiled native
+# dependencies (an image whose dependencies are all portable JavaScript or WebAssembly would not need it).
 #
-# A tagged run also attaches an SBOM and SLSA build provenance to the image and adds a keyless cosign signature, so
-# anyone can verify the image before running it.
+# A push to a branch or a pull request only BUILDS each arch on its native runner and exercises it (starts the
+# container, reaches /status, runs the healthcheck, and proves a read-only state mount fails with guidance) —
+# nothing is pushed. A release tag, or a manual run with the publish box checked, pushes each arch by digest, merges
+# them into a multi-arch manifest on ghcr, and adds an SBOM, SLSA provenance, and a keyless cosign signature.
 
 name: Build container image
 
@@ -24,41 +25,48 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+-*'
   pull_request:
     branches: [master, main]
-  workflow_dispatch:                 # a manual run — build-only by default, or check the box to publish
+  workflow_dispatch:
     inputs:
       publish:
-        description: 'Publish, sign, and attest the image (leave unchecked for a build-only test).'
+        description: 'Publish, merge, sign, and attest the image (leave unchecked for a build-only test).'
         type: boolean
         default: false
 
 env:
-  # Lower-cased from the repository owner at run time, so it works whatever the owner's letter case is.
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/lokyni
 
 jobs:
-  image:
-    runs-on: ubuntu-latest
+  # ── Build each architecture on its OWN native runner. On a release this pushes each arch by digest (no tag yet);
+  #    on a branch/PR it loads the single-arch image locally and exercises it. No QEMU anywhere. ──
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm   # GitHub's native arm64 Linux runner — no emulation
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
     permissions:
-      contents: read            # read the repository
-      packages: write           # push to the GitHub Container Registry (ghcr.io)
-      id-token: write           # keyless cosign signing and provenance, via the runner's OIDC identity
-      attestations: write       # store the build-provenance attestation
+      contents: read
+      packages: write          # push the per-arch digest to ghcr (publish path only)
+      id-token: write          # reserved for keyless signing on the publish path
     steps:
       - uses: actions/checkout@v4
 
-      # Integrity gate, before anything is built or pushed: the Docker port literals (EXPOSE, the launch commands,
-      # the compose publish mapping) must still track lib/constants.js DEFAULT_PORT, or a signed image could ship a
-      # container whose healthcheck probes a port nothing listens on. This runs on Node built-ins only, so it needs
-      # no npm install and gates the build immediately after checkout.
+      # Integrity gate (Node built-ins only, no npm install): the Docker port literals must still track
+      # lib/constants.js DEFAULT_PORT, so a published image can't ship a container whose healthcheck probes a dead
+      # port. Cheap, so it runs on both arch legs before anything is built.
       - uses: actions/setup-node@v4
         with:
           node-version: '24.11.1'
       - name: Verify the Docker config has not drifted
         run: node lib/test/unit/docker-config-drift.test.js
 
-      # A publish happens for a release tag, or a manual run that checked the publish box — never a branch push or
-      # a build-only manual run.
       - name: Decide whether to publish
         id: publish
         run: |
@@ -68,64 +76,28 @@ jobs:
             echo "push=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # Emulation so the arm64 layer can be built on an amd64 runner. Needed only on the multi-arch publish path;
-      # running it always is harmless and cheap.
-      - name: Set up QEMU for cross-architecture builds
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Validate the compose file
-        run: docker compose -f docker/docker-compose.yml config --quiet
 
       - name: Lower-case the image name
         id: name
         run: echo "image=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      - name: Sign in to the container registry
-        if: steps.publish.outputs.push == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # ── Build-only path (branch / PR / build-only dispatch): load this arch's image and prove it works. ──
+      - name: Validate the compose file
+        if: steps.publish.outputs.push != 'true'
+        run: docker compose -f docker/docker-compose.yml config --quiet
 
-      - name: Derive image tags and labels
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ steps.name.outputs.image }}
-          # latest=auto moves `latest` only for a STABLE release (the highest non-pre-release semver), so a
-          # pre-release tag never becomes `latest` and never claims the major.minor line.
-          flavor: latest=auto
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-
-      # Build the image. On a publish it is built MULTI-ARCH (amd64 + arm64) and pushed with an SBOM and
-      # maximum-detail SLSA provenance attached as OCI attestations. On a branch push or build-only run it is built
-      # SINGLE-ARCH (the runner's amd64) and loaded into the local daemon under a fixed tag so the smoke tests below
-      # can run it — a multi-arch build produces a manifest list, which cannot be loaded into the local daemon.
-      - name: Build (and push on a release)
-        id: build
+      - name: Build this architecture and load it
+        if: steps.publish.outputs.push != 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/Dockerfile
-          push: ${{ steps.publish.outputs.push == 'true' }}
-          load: ${{ steps.publish.outputs.push != 'true' }}
-          platforms: ${{ steps.publish.outputs.push == 'true' && 'linux/amd64,linux/arm64' || '' }}
-          tags: ${{ steps.publish.outputs.push == 'true' && steps.meta.outputs.tags || 'lokyni:ci' }}
-          labels: ${{ steps.meta.outputs.labels }}
-          # The attestations make BuildKit emit a manifest list, which only a registry can hold; the build-only
-          # path loads a plain single image into the daemon, so attach them only when publishing.
-          sbom: ${{ steps.publish.outputs.push == 'true' }}
-          provenance: ${{ steps.publish.outputs.push == 'true' && 'mode=max' || 'false' }}
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: lokyni:ci
 
-      # Prove the freshly built image actually starts and serves, against the single-arch image loaded above. Skipped
-      # on the multi-arch publish path (a manifest list cannot be run directly).
       - name: Start with a writable state volume and reach /status
         if: steps.publish.outputs.push != 'true'
         run: |
@@ -162,25 +134,124 @@ jobs:
           test "$code" -ne 0
           grep -q "cannot write to its data directory" "$RUNNER_TEMP/lokyni-readonly.log"
 
-      # A published image's boot self-check already verifies it starts; sign the image digest keylessly as well, so
-      # the image is verifiable before it runs. cosign uses the runner's OIDC identity (no stored key) and writes a
-      # permanent PUBLIC transparency-log record, so it runs only for a real release tag.
+      # ── Publish path: build this arch and push it BY DIGEST (no tag yet — the merge job assembles the tags). ──
+      - name: Sign in to the container registry
+        if: steps.publish.outputs.push == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build this architecture and push by digest
+        id: build
+        if: steps.publish.outputs.push == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: ${{ matrix.platform }}
+          # Push the image with no tag, identified only by its content digest; the merge job collects the per-arch
+          # digests into one tagged manifest list. name-canonical keeps the digest tied to the final image name.
+          outputs: type=image,name=${{ steps.name.outputs.image }},push-by-digest=true,name-canonical=true,push=true
+          sbom: true
+          provenance: mode=max
+
+      - name: Export this arch's digest
+        if: steps.publish.outputs.push == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "$RUNNER_TEMP/digests/${digest#sha256:}"
+
+      - name: Upload the digest
+        if: steps.publish.outputs.push == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # ── Merge the per-arch digests into ONE multi-arch manifest, then sign and attest it. Publish path only. ──
+  merge:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download the per-arch digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Lower-case the image name
+        id: name
+        run: echo "image=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Sign in to the container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.name.outputs.image }}
+          # latest=auto moves `latest` and the major.minor tag only for a STABLE release, so a pre-release tag
+          # never becomes `latest` or claims the major.minor line.
+          flavor: latest=auto
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      # Assemble the multi-arch manifest from the per-arch digests pushed above, under every derived tag.
+      - name: Create the multi-arch manifest
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ steps.name.outputs.image }}@sha256:%s ' *)
+
+      - name: Inspect the published manifest
+        run: docker buildx imagetools inspect ${{ steps.name.outputs.image }}:${{ steps.meta.outputs.version }}
+
+      # Sign and attest the final manifest digest, keylessly. Gated to a real release tag (a permanent public
+      # transparency-log record), never a manual test publish.
+      - name: Capture the manifest digest
+        id: digest
+        run: |
+          d=$(docker buildx imagetools inspect ${{ steps.name.outputs.image }}:${{ steps.meta.outputs.version }} --format '{{json .Manifest}}' | jq -r '.digest')
+          echo "digest=$d" >> "$GITHUB_OUTPUT"
+
       - name: Install cosign
         if: startsWith(github.ref, 'refs/tags/')
         uses: sigstore/cosign-installer@v3
 
-      - name: Sign the image digest with cosign
+      - name: Sign the manifest digest with cosign
         if: startsWith(github.ref, 'refs/tags/')
         env:
-          DIGEST: ${{ steps.build.outputs.digest }}
           IMAGE: ${{ steps.name.outputs.image }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
         run: cosign sign --yes "${IMAGE}@${DIGEST}"
 
-      # A second, GitHub-native provenance attestation, verifiable later with `gh attestation verify`.
       - name: Attest build provenance
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ steps.name.outputs.image }}
-          subject-digest: ${{ steps.build.outputs.digest }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
           push-to-registry: true
