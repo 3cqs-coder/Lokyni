@@ -1596,6 +1596,10 @@ The **🕸 Map** button in the document panel opens an interactive map of your w
 
 **Explore it like a canvas:** drag to pan, and scroll, pinch, or use the on-screen buttons to zoom — so even a dense map stays readable (zoom in to read any label). The busiest hubs are always labeled; smaller points reveal their name when you hover or zoom in. **Hover a point** to trace its connections (its links light up and the rest dims). **Click a point** to select it — its details appear below the map with an **Ask about** button that drops a ready-made question into the composer, so you jump straight from the map into a grounded answer. It works the same with a mouse, a trackpad, or touch.
 
+**Read the structure at a glance.** Points are **colored by type**, and a **Types** legend lists each kind with its color and count. Click a type in the legend to hide or show those points, so you can filter the map down to, say, just people or just places. A **Most connected** list names the busiest entities; click one to jump straight to it. A bigger dot means more connections.
+
+**Trace how two things connect.** **Shift-click two points** (or select one and Shift-click the second) and the map lights the shortest path between them and offers **Explain this connection** — which drops a "how are X and Y related?" question into the composer. The path you see comes from the map itself, and the answer comes from the same grounded, cited retrieval as any other question. Every label and type is handled by meaning, not by language, so an entity named in any language or script works the same.
+
 The map draws on the knowledge graph (the `useGraphRag` setting). Turn on **Knowledge graph** in Advanced → Retrieval — it builds automatically in the background and then stays current as your documents change; the map shows the most-connected entities (bounded so it stays readable and fast even on a large corpus). It's rendered right in the app with no external library, and it respects the workspace each window is viewing.
 
 ### Notes
