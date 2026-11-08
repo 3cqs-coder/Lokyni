@@ -1678,6 +1678,12 @@ An honest negative is handled carefully. When Lokyni answers that your documents
 reads as a failing claim even though the answer is correct. For a simple negative like that one, the check
 recognizes it and does not mark it unverified.
 
+A conversational lead-in is skipped for the same reason. When an answer opens with a transition that
+introduces what follows — a line like "Switching to the next file —" — that line states no fact of its own,
+so the check never grades it and looks only at the real sentences after it. The sentences are measured by the
+substance they carry in their own script, so a short claim written in a dense writing system such as Chinese
+or Japanese is checked just like a longer one in English.
+
 Safety comes first, though. The check never does this for a sentence that introduces any new content — a name,
 a number, or a plain fact the sources don't contain. That is the one rule it will not bend, because for an
 anti-hallucination check the worst outcome is hiding an invented fact. So a more nuanced decline, worded with
