@@ -64,6 +64,16 @@
   --shadow-lg:  0 6px 12px rgba(0, 0, 0, 0.10), 0 20px 44px -12px rgba(0, 0, 0, 0.26);
   --shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.35);
   --scrim:      rgba(0, 0, 0, 0.6);
+  /* Motion — one timing scale, so every micro-interaction (hover, press, reveal) shares the same feel
+     instead of each rule hardcoding its own duration. Durations stay short so the UI reads as instant.
+     Theme-independent (timing doesn't change per theme), like the elevation ramp, so defined once. The
+     global prefers-reduced-motion rule neutralizes every transition built on these, so motion is
+     accessible by construction. Kept consistent across the product family so interactions read as one. */
+  --dur-fast:   120ms;  /* small feedback — hover tint, icon colour */
+  --dur:        180ms;  /* the default — most transitions */
+  --dur-slow:   280ms;  /* the most prominent motion — panels, status */
+  --ease:        cubic-bezier(0.22, 0.61, 0.36, 1);  /* decelerate — enters, hovers */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);   /* slight overshoot — reserved for a lively press */
   /* A soft top sheen on raised surfaces — the one elevation token that is NOT theme-independent: a
      bright white edge reads on light/sepia paper but would glare on a dark surface, so dark keeps it
      barely-there. Paired with --shadow-sm/md on cards and the composer. */
@@ -175,7 +185,7 @@
   position: absolute; left: 8px; top: -60px; z-index: 200;
   background: var(--accent-strong); color: #fff; padding: 8px 14px; border-radius: 8px;
   text-decoration: none; font-family: var(--font-sans); font-size: 14px;
-  transition: top 0.15s ease;
+  transition: top var(--dur) var(--ease);
 }
 .skip-link:focus { top: calc(8px + env(safe-area-inset-top, 0px)); }
 
@@ -229,7 +239,7 @@ body {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  transition: background 0.2s, color 0.2s;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 
 /* ── Header ── */
@@ -282,11 +292,11 @@ body {
   font-family: var(--font-mono); font-size: 11px; color: var(--text-mid);
   padding: 3px 9px; border-radius: 20px;
   border: 1px solid var(--border); background: var(--surface2);
-  transition: all 0.3s;
+  transition: all var(--dur-slow) var(--ease);
 }
 #status-badge .dot {
   width: 6px; height: 6px; border-radius: 50%;
-  background: var(--text-dim); transition: background 0.3s;
+  background: var(--text-dim); transition: background var(--dur-slow) var(--ease);
 }
 #status-badge.ready .dot    { background: var(--success); }
 #status-badge.indexing .dot { background: var(--warn-text); animation: pulse 1s infinite; }
@@ -298,7 +308,7 @@ body {
   background: none; border: 1px solid var(--border); color: var(--text-mid);
   font-size: 13px; padding: 5px 11px; border-radius: 8px; cursor: pointer;
   font-family: var(--font-mono); white-space: nowrap;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 .hdr-btn:hover  { border-color: var(--accent); color: var(--accent); }
 .hdr-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
@@ -332,7 +342,7 @@ body {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
   background: none; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px;
   cursor: pointer; color: var(--text); font-family: var(--font-sans);
-  transition: background 0.12s, border-color 0.12s;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 .menu-row:hover { background: var(--bg-elev); border-color: var(--border); }
 /* Keyboard focus keeps a visible, high-contrast ring (WCAG 2.4.11) — never suppressed to look like hover. */
@@ -355,7 +365,7 @@ body {
   display: flex; flex-direction: column; flex-shrink: 0;
   /* visibility is transitioned with no delay when opening (so content appears at once) but with a
      matching delay when collapsing (so it stays visible through the fade, then hides). */
-  transition: width 0.2s ease, opacity 0.2s ease, visibility 0s linear 0s;
+  transition: width var(--dur) var(--ease), opacity var(--dur) var(--ease), visibility 0s linear 0s;
   overflow: hidden;
 }
 /* visibility:hidden (not just opacity/pointer-events) is what removes the collapsed panel's inputs
@@ -363,7 +373,7 @@ body {
    screen-reader user tabs into a dozen invisible, off-screen controls. */
 #doc-panel.collapsed {
   width: 0; opacity: 0; pointer-events: none; visibility: hidden;
-  transition: width 0.2s ease, opacity 0.2s ease, visibility 0s linear 0.2s;
+  transition: width var(--dur) var(--ease), opacity var(--dur) var(--ease), visibility 0s linear var(--dur);
 }
 
 /* Hidden on desktop (the app-header Documents toggle closes the panel there); the mobile block below shows it.
@@ -402,7 +412,7 @@ body {
   padding: 16px 12px;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
   flex-shrink: 0;
 }
 #drop-zone:hover, #drop-zone.drag-over { border-color: var(--accent); background: var(--accent-dim); }
@@ -438,7 +448,7 @@ body {
   display: flex; align-items: center; gap: 8px;
   padding: 7px 8px; border-radius: 6px;
   border: 1px solid transparent;
-  transition: background 0.12s, border-color 0.12s; margin-bottom: 3px;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); margin-bottom: 3px;
 }
 .doc-item:hover { background: var(--surface2); border-color: var(--border); }
 
@@ -448,10 +458,10 @@ body {
   padding: 6px 8px; border-radius: 6px; margin-bottom: 3px;
   cursor: pointer; -webkit-user-select: none; user-select: none;
   border: 1px solid transparent;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 .doc-folder:hover { background: var(--surface2); border-color: var(--border); }
-.doc-folder .df-twisty { font-size: 10px; color: var(--text-dim); width: 12px; flex-shrink: 0; transition: transform 0.12s; background: none; border: none; padding: 0; cursor: pointer; line-height: 1; }
+.doc-folder .df-twisty { font-size: 10px; color: var(--text-dim); width: 12px; flex-shrink: 0; transition: transform var(--dur-fast) var(--ease); background: none; border: none; padding: 0; cursor: pointer; line-height: 1; }
 .doc-folder.collapsed .df-twisty { transform: rotate(-90deg); }
 .doc-folder .df-icon { font-size: 13px; flex-shrink: 0; }
 .doc-folder .df-name {
@@ -481,13 +491,13 @@ body {
 .doc-item .di-del {
   background: none; border: none; color: var(--text-dim); cursor: pointer;
   font-size: 14px; padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
-  transition: color 0.15s, background 0.15s; line-height: 1;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease); line-height: 1;
 }
 .doc-item .di-del:hover { color: var(--error); background: var(--error-tint); }
 .doc-item .di-summarize {
   background: none; border: none; color: var(--text-dim); cursor: pointer;
   font-size: 13px; padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
-  transition: color 0.15s, background 0.15s; line-height: 1;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease); line-height: 1;
 }
 .doc-item .di-summarize:hover { color: var(--accent); background: var(--accent-dim); }
 .doc-item .di-summarize:disabled { opacity: 0.3; cursor: default; }
@@ -505,7 +515,7 @@ body {
 .doc-search {
   flex: 1 1 100%; display: flex; align-items: center; gap: 6px;
   background: var(--surface); border: 1px solid var(--border); border-radius: 5px;
-  padding: 0 6px; transition: border-color 0.15s;
+  padding: 0 6px; transition: border-color var(--dur) var(--ease);
 }
 .doc-search:focus-within { border-color: var(--accent); }
 .doc-search-ico { display: inline-flex; align-items: center; color: var(--text-dim); flex-shrink: 0; font-size: 12px; }
@@ -520,7 +530,7 @@ body {
 .doc-search-clear {
   background: none; border: none; color: var(--text-dim); cursor: pointer;
   font-size: 12px; line-height: 1; padding: 3px 4px; border-radius: 4px; flex-shrink: 0;
-  transition: color 0.15s, background 0.15s;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 .doc-search-clear:hover { color: var(--accent); background: var(--accent-dim); }
 #doc-search-clear[hidden] { display: none; }
@@ -531,7 +541,7 @@ body {
 #doc-select-all {
   font-size: 10px; padding: 2px 7px; border-radius: 4px; cursor: pointer;
   background: none; border: 1px solid var(--border); color: var(--text-dim);
-  font-family: var(--font-mono); transition: border-color 0.15s, color 0.15s;
+  font-family: var(--font-mono); transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   white-space: nowrap; flex-shrink: 0;
 }
 #doc-select-all:hover { border-color: var(--accent); color: var(--accent); }
@@ -617,7 +627,7 @@ body {
   font-size: calc(12px * var(--read-scale)); font-family: var(--font-mono); color: var(--text-mid);
   cursor: pointer; text-decoration: none; white-space: nowrap;
   max-width: 260px; overflow: hidden; text-overflow: ellipsis;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .source-pill:hover { background: var(--pill-hover); border-color: var(--accent); color: var(--accent); }
 /* The filename is the one flexible item: it shrinks and ellipsizes so the fixed trailing badges (the
@@ -717,7 +727,7 @@ body {
   font-size: 14px; padding: 10px 14px; resize: none; outline: none;
   min-height: 42px; max-height: 140px; overflow-y: auto; line-height: 1.5;
   box-shadow: var(--edge-highlight), var(--shadow-sm);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 /* Mouse/programmatic focus: recolor the border and lift with the elevation shadow. Scoped to :not(:focus-visible)
    so it does NOT overwrite the keyboard focus ring defined below (same-specificity source order would otherwise
@@ -734,7 +744,7 @@ body {
   font-family: var(--font-sans); font-size: 13px; font-weight: 500;
   padding: 10px 18px; cursor: pointer; height: 42px; white-space: nowrap;
   box-shadow: var(--edge-highlight), var(--shadow-sm);
-  transition: opacity 0.15s; flex-shrink: 0;
+  transition: opacity var(--dur) var(--ease); flex-shrink: 0;
 }
 #send-button:hover:not(:disabled) { opacity: 0.85; }
 #send-button:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -765,7 +775,7 @@ body {
 .starter-pill {
   background: var(--surface2); border: 1px solid var(--border); color: var(--text-mid);
   font-size: 12px; border-radius: 999px; padding: 6px 14px; cursor: pointer; -webkit-user-select: none; user-select: none;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 .starter-pill:hover { border-color: var(--accent); color: var(--accent); }
 /* Keep the shared focus-visible outline (don't suppress it) so keyboard focus is unmistakable, not
@@ -969,13 +979,13 @@ body {
 .modal-btn-cancel {
   background: none; border: 1px solid var(--border); color: var(--text-mid);
   padding: 7px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;
-  font-family: var(--font-sans); transition: border-color 0.2s, color 0.2s;
+  font-family: var(--font-sans); transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .modal-btn-cancel:hover { border-color: var(--text-mid); color: var(--text); }
 .modal-btn-ok {
   background: var(--accent-strong); border: none; color: #fff;
   padding: 7px 18px; border-radius: 8px; cursor: pointer; font-size: 13px;
-  font-family: var(--font-sans); font-weight: 500; transition: opacity 0.2s;
+  font-family: var(--font-sans); font-weight: 500; transition: opacity var(--dur) var(--ease);
 }
 .modal-btn-ok:hover { opacity: 0.85; }
 
@@ -1024,7 +1034,7 @@ body {
   flex: 1; background: var(--surface2); border: 1px solid var(--border);
   color: var(--text); padding: 6px 10px; border-radius: 7px; font-size: 13px;
   font-family: var(--font-sans); outline: none; min-width: 0;
-  transition: border-color 0.2s;
+  transition: border-color var(--dur) var(--ease);
 }
 .settings-row input:focus, .settings-row select:focus { border-color: var(--accent); }
 /* A checkbox is a boolean toggle, not a fill-the-row input: undo the text-input styling
@@ -1174,7 +1184,7 @@ details.settings-filtered { display: none; }
   background: none; border: 1px solid var(--border); color: var(--text-mid);
   font-family: var(--font-mono); font-size: 12px; height: 42px; padding: 0 12px;
   border-radius: var(--radius); cursor: pointer; white-space: nowrap;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 .tools-btn:hover, .tools-btn.open { border-color: var(--accent); color: var(--accent); }
 .tools-btn .tools-ico { font-size: 13px; }
@@ -1207,7 +1217,7 @@ details.settings-filtered { display: none; }
 .tool-row {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
   background: none; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px;
-  cursor: pointer; color: var(--text); transition: background 0.12s, border-color 0.12s;
+  cursor: pointer; color: var(--text); transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 .tool-row:hover { background: var(--bg-elev); border-color: var(--border); }
 /* Keyboard focus keeps a visible, high-contrast ring (WCAG 2.4.11) — never suppressed to look like hover. */
@@ -1252,7 +1262,7 @@ details.settings-filtered { display: none; }
   padding: 5px 12px;
   cursor: pointer;
   border: 1px solid var(--border);
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .web-offer-btn.yes { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 .web-offer-btn.yes:hover { background: var(--accent); color: var(--bg); }
@@ -1369,7 +1379,7 @@ details.settings-filtered { display: none; }
 .picker-primary {
   border: 1px solid var(--accent); color: var(--accent); background: var(--accent-dim);
   border-radius: 7px; padding: 7px 14px; cursor: pointer; font-size: 13px;
-  font-family: var(--font-sans); transition: background 0.15s, color 0.15s;
+  font-family: var(--font-sans); transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .picker-primary:hover { background: var(--accent); color: var(--bg); }
 #source-browse-btn {
@@ -1654,7 +1664,7 @@ details.settings-filtered { display: none; }
 .voice-preview {
   background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-dim);
   cursor: pointer; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
-  font-size: 15px; flex: none; transition: color 0.15s, border-color 0.15s;
+  font-size: 15px; flex: none; transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 .voice-preview:hover { color: var(--accent); border-color: var(--accent); }
 .voice-preview.loading { opacity: 0.6; }
@@ -1765,12 +1775,12 @@ details.settings-filtered { display: none; }
   background: var(--bg-elev); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
 }
 .mm-ctrl:hover { border-color: var(--text-mid); }
-.mm-edge { stroke: var(--border); stroke-width: 1; opacity: 0.5; transition: opacity 0.12s, stroke 0.12s; }
+.mm-edge { stroke: var(--border); stroke-width: 1; opacity: 0.5; transition: opacity var(--dur-fast) var(--ease), stroke var(--dur-fast) var(--ease); }
 .mm-edge.mm-hi { stroke: var(--accent); opacity: 0.95; }
 .mm-edge.mm-dim { opacity: 0.07; }
-.mm-node { cursor: pointer; transition: opacity 0.12s; }
+.mm-node { cursor: pointer; transition: opacity var(--dur-fast) var(--ease); }
 .mm-node.mm-dim { opacity: 0.2; }
-.mm-dot { fill: var(--accent); opacity: 0.85; transition: opacity 0.12s; }
+.mm-dot { fill: var(--accent); opacity: 0.85; transition: opacity var(--dur-fast) var(--ease); }
 /* Sphere-shade overlay: lifts a flat dot to a sphere (highlight + shaded far edge) via a shared radial gradient,
    over any fill color and in both themes. Non-interactive so clicks fall through to the dot; it dims with the node. */
 .mm-sphere-shade { pointer-events: none; }
@@ -1785,7 +1795,7 @@ details.settings-filtered { display: none; }
 .mm-node:hover .mm-label, .mm-node:focus .mm-label, .mm-node.mm-hi .mm-label, .mm-node.mm-sel .mm-label { fill: var(--text); }
 /* Declutter: low-degree ("minor") nodes hide their label until hovered / focused / highlighted / selected, so the
    hubs stay labeled and the map isn't a wall of overlapping text. Zoom in or hover to read any node. */
-.mm-node.mm-minor .mm-label { opacity: 0; transition: opacity 0.12s; }
+.mm-node.mm-minor .mm-label { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
 .mm-node.mm-minor:hover .mm-label,
 .mm-node.mm-minor:focus .mm-label,
 .mm-node.mm-minor.mm-hi .mm-label,
@@ -1846,7 +1856,7 @@ details.settings-filtered { display: none; }
 .apikey-name { font-weight: 600; font-size: 13px; }
 .apikey-meta { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
 .apikey-revoke { background: none; border: 1px solid var(--border); color: var(--error);
-  font-size: 12px; padding: 4px 10px; border-radius: 5px; cursor: pointer; flex-shrink: 0; transition: background 0.15s; }
+  font-size: 12px; padding: 4px 10px; border-radius: 5px; cursor: pointer; flex-shrink: 0; transition: background var(--dur) var(--ease); }
 .apikey-revoke:hover { background: var(--error-tint); }
 /* The create-key form stacks its scopes, rate-limit input, and button vertically. */
 .apikey-create { display: flex; flex-direction: column; gap: 8px; width: 100%; }
@@ -2253,7 +2263,7 @@ details.settings-filtered { display: none; }
   background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-dim);
   cursor: pointer; height: 42px; width: 42px; padding: 0; flex-shrink: 0; align-self: flex-end;
   display: inline-flex; align-items: center; justify-content: center; font-size: 20px;
-  transition: color 0.15s, border-color 0.15s, opacity 0.15s;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 .mic-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
 .mic-btn:disabled { cursor: default; }
@@ -2405,7 +2415,7 @@ details.eval-qrow[open] > summary::before { content: '▾'; }
   border-radius: 5px;
   padding: 3px 10px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   display: inline-flex; align-items: center; gap: 6px;
 }
 #cfg-suggest-models:hover,
