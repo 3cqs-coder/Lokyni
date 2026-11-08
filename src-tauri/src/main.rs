@@ -92,9 +92,13 @@ fn resolve_port(data_dir: &Path) -> u16 {
             }
         }
     }
-    let p = free_port();
-    let _ = std::fs::write(&marker, p.to_string());
-    p
+    // Don't persist this speculative pick. On Linux there is no single-instance short-circuit, so a second
+    // launch also reaches here; its sidecar then loses the per-data-dir instance lock and exits. Writing the
+    // marker now would clobber the LIVE instance's remembered port with one that never served, so the next clean
+    // launch would land on a new origin and silently reset browser storage (theme, conversation, toggles) — the
+    // very thing the marker exists to prevent. The marker is written only once a sidecar is confirmed to be the
+    // live server (see the readiness thread).
+    free_port()
 }
 
 // Fetch the server's /status body with a short, self-contained HTTP request — no HTTP-client
@@ -633,7 +637,9 @@ fn main() {
                         } else if respawns < MAX_RESPAWNS {
                             respawns += 1;
                             let new_port = free_port();
-                            let _ = std::fs::write(data_for_thread.join("desktop-port"), new_port.to_string());
+                            // The marker is persisted only once a sidecar is confirmed live (below), never on this
+                            // speculative respawn port — a respawn that also loses the instance lock must not leave
+                            // a dead port behind for the next launch.
                             match spawn_server(&runtime_t, &entry_t, &data_for_thread, &tessdata_t, new_port) {
                                 Ok(c) => {
                                     *guard = Some((c, new_port));
@@ -655,6 +661,10 @@ fn main() {
                     if matches!(step, Step::Fail) { show_startup_error(&handle, &data_for_thread); return; }
                     // Ready only when the responder is actually Lokyni (not a squatting service).
                     if server_is_lokyni(port) {
+                        // This instance is the live server, so NOW persist its port as the remembered origin for
+                        // the next launch. Persisting only here — not on the speculative pick or a lock-losing
+                        // respawn — keeps a second instance from clobbering the marker with a port that never served.
+                        let _ = std::fs::write(data_for_thread.join("desktop-port"), port.to_string());
                         if let Some(win) = handle.get_webview_window("main") {
                             // Navigate natively rather than from page script: the server's
                             // control plane rejects cross-origin requests as a CSRF guard, and a
