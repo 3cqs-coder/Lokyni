@@ -71,7 +71,7 @@ const PRUNE = [
   '@ibm-cloud',   // cloud model integration the app never instantiates
   'ts-node',      // only reached through that integration
   'typescript',   // only reached through that integration
-  'marked',       // a devDependency; both the browser AND lib/docx.js use the vendored copy, so the npm package is never require()d at runtime
+  'marked',       // a devDependency; both the browser AND lib/export/docx.js use the vendored copy, so the npm package is never require()d at runtime
 ];
 
 function dirSize(dir) {
@@ -120,7 +120,7 @@ function pruneStagedModules() {
 // the build loudly rather than shipping. Node built-ins only (global fetch, crypto), so it runs the same on every OS.
 async function stageBundledLang() {
   const crypto = require('crypto');
-  const { OCR_BASE_LANGUAGE, OCR_LANGDATA_URL, OCR_LANGDATA_SHA256 } = require(path.join(REPO, 'lib', 'ocr-languages'));
+  const { OCR_BASE_LANGUAGE, OCR_LANGDATA_URL, OCR_LANGDATA_SHA256 } = require(path.join(REPO, 'lib', 'media', 'ocr-languages'));
   const code = OCR_BASE_LANGUAGE;                 // the always-on floor — the only pack that must be present offline
   const pin = OCR_LANGDATA_SHA256[code];
   const name = code + '.traineddata.gz';

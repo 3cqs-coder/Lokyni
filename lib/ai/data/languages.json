@@ -1,5 +1,5 @@
 {
-  "_doc": "Language-detection data, externalized from lib/langdetect.js (loaded there). functionWords: high-frequency closed-class function words per language; add a language by adding a row. supportedLanguages: code+display-name for every detectable language. Pure data — no regexes (those stay in langdetect.js).",
+  "_doc": "Language-detection data, externalized from lib/text/langdetect.js (loaded there). functionWords: high-frequency closed-class function words per language; add a language by adding a row. supportedLanguages: code+display-name for every detectable language. Pure data — no regexes (those stay in langdetect.js).",
 
   "functionWords": {
     "en": ["the","and","of","to","in","is","that","for","with","was","this","are","it","as","be","at","by","an","or","but","not","what","which","who","how","why","me","my","you","your","we","our","us","he","she","him","her","they","them","more","most","about","from","on","if","so","than","then","out","up","do","does","did","can","could","would","should","will","has","have","had","all","any","some","no","just","also","into","there","here","their","been","where","when"],

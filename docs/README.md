@@ -2544,7 +2544,7 @@ Two mutually exclusive paths:
 
 **Intent-driven** — fires on `new_topic`, or on a continuation rejected by guard 0b.
 Performs a full conversation reset (shared `clearConversationState` in
-`lib/conversation.js`): `allowedDocIds`, history, read positions, the rolling
+`lib/chat/conversation.js`): `allowedDocIds`, history, read positions, the rolling
 conversation summary, the consulted-docs list, and all passage-tracking maps. Using
 one shared reset for both a topic shift and "New" fixed a bug where a shift cleared
 only history/docs, leaving the *previous* topic's summary injected into the new

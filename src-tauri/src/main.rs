@@ -249,7 +249,7 @@ fn stop_child(child: &mut Child) {
     }
     #[cfg(unix)]
     unsafe { libc::kill(child.id() as i32, libc::SIGTERM); }
-    // Wait STRICTLY LONGER than the sidecar's own graceful hard timeout (lib/shutdown.js
+    // Wait STRICTLY LONGER than the sidecar's own graceful hard timeout (lib/ops/shutdown.js
     // HARD_TIMEOUT_MS = 8000 ms) before force-killing. If this window merely equaled that deadline,
     // a legitimately slow-but-valid teardown (a large in-flight index write, closing a URL-ingest
     // browser) could be SIGKILLed at the same instant Node runs its `exit` handler — skipping the

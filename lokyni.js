@@ -103,8 +103,8 @@ const resetPasswordCli = async () => {
   const username = (args[i + 1] && !args[i + 1].startsWith('--')) ? args[i + 1] : '';
   if (!username) { console.error('Usage: node lokyni.js --reset-password <username> [--password <new>]'); process.exitCode = 1; return; }
   const cfg = require('./lib/config');
-  const users = require('./lib/users');
-  const accounts = require('./lib/accounts');
+  const users = require('./lib/auth/users');
+  const accounts = require('./lib/auth/accounts');
   const rec = users.getByUsername(cfg.DATA_DIR, username);
   if (!rec) {
     const known = users.list(cfg.DATA_DIR).map(u => u.username);
@@ -144,8 +144,8 @@ const runEvalCli = async () => {
   try { await runLifecycleExclusive(() => initIndex()); }
   catch (e) { console.error(`Index build failed — cannot evaluate: ${e && e.message ? e.message : e}`); process.exitCode = 2; return; }
   const ws = workspaceArg || require('./lib/state').workspaceId;
-  const evalx = require('./lib/eval');
-  const { METRIC_KEYS, METRIC_LABELS: LABELS } = require('./lib/evalmetrics');
+  const evalx = require('./lib/eval/eval');
+  const { METRIC_KEYS, METRIC_LABELS: LABELS } = require('./lib/eval/evalmetrics');
   const pct = (v) => (typeof v === 'number' && !Number.isNaN(v)) ? Math.round(v * 100) + '%' : 'n/a';
   const sign = (d) => (typeof d === 'number' && Math.abs(d) >= 0.005) ? ` (${d > 0 ? '+' : '−'}${Math.abs(Math.round(d * 100))} pts vs last run)` : '';
   let result;
@@ -198,7 +198,7 @@ const runServiceCommand = async () => {
 const startServer = async ({ forceRebuild = false } = {}) => {
   // Capture console output in memory so the log viewer works even when Lokyni is
   // run from a terminal, where no service manager is redirecting output to a file.
-  require('./lib/logbuffer').install();
+  require('./lib/ops/logbuffer').install();
 
   // Prove the data and configuration folders are writable before startup. A read-only bind mount or a
   // root-owned host folder otherwise fails later as a generic mkdir error, after the server has already
@@ -206,7 +206,7 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   // container ownership fix.
   {
     const cfgEarly = require('./lib/config');
-    const disk = require('./lib/disk');
+    const disk = require('./lib/storage/disk');
     const path = require('path');
     const checks = [
       ['data directory', cfgEarly.DATA_DIR || './data'],
@@ -231,7 +231,7 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   // volume stays quiet rather than guessing.
   try {
     const cfgEarly = require('./lib/config');
-    const disk = require('./lib/disk');
+    const disk = require('./lib/storage/disk');
     let timer;
     const free = await Promise.race([
       disk.freeBytesAsync(cfgEarly.DATA_DIR || './data'),
@@ -249,7 +249,7 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   const { startWebServer } = require('./lib/server');
   const { initIndex, initIndexReadOnly, startReadOnlyRefresh, startWatcher, stopWatchers, runLifecycleExclusive, sweepOrphanVectors } = require('./lib/indexing/init');
   const { writePidFile, removePidFile } = require('./lib/service');
-  const shutdown = require('./lib/shutdown');
+  const shutdown = require('./lib/ops/shutdown');
   const state = require('./lib/state');
   let server;   // set by startWebServer() below; captured by the 'web server' teardown
 
@@ -280,7 +280,7 @@ const startServer = async ({ forceRebuild = false } = {}) => {
     if (state.indexPromise) { try { await state.indexPromise; } catch { /* it logs its own errors */ } }
   });
   shutdown.register('OCR workers', async () => {
-    await require('./lib/ocr').releaseTesseract();
+    await require('./lib/media/ocr').releaseTesseract();
   });
   shutdown.register('reranker worker', async () => {
     require('./lib/retrieval/reranker').shutdownReranker();
@@ -295,8 +295,8 @@ const startServer = async ({ forceRebuild = false } = {}) => {
     require('./lib/indexing/parseworker').shutdownParseWorker();
   }, () => { try { require('./lib/indexing/parseworker').shutdownParseWorker(); } catch {} });
   shutdown.register('article-extract worker', async () => {
-    require('./lib/articleextract').shutdown();
-  }, () => { try { require('./lib/articleextract').shutdown(); } catch {} });
+    require('./lib/web/articleextract').shutdown();
+  }, () => { try { require('./lib/web/articleextract').shutdown(); } catch {} });
   shutdown.register('text-to-speech worker', async () => {
     require('./lib/voice/tts').shutdown();
   }, () => { try { require('./lib/voice/tts').shutdown(); } catch {} });
@@ -309,13 +309,13 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   // Synchronous last-resort backstop (like the browser/parse children) so a hard exit can't orphan an ffmpeg decode.
   shutdown.onExitKill(() => { try { require('./lib/indexing/ffmpeg').killAll(); } catch { /* best-effort */ } });
   shutdown.register('URL-ingestion browsers', async () => {
-    const urlfetch = require('./lib/urlfetch');
+    const urlfetch = require('./lib/web/urlfetch');
     await urlfetch.closeAllBrowsers();
     await urlfetch.sweepStaleProfiles();
   });
   // Unconditional backstop: force-kill any Chromium still open on ANY exit path (including an
   // abnormal exit or a graceful shutdown that timed out mid-close), so a browser can never orphan.
-  shutdown.onExitKill(() => { try { require('./lib/urlfetch').killAllBrowsersSync(); } catch { /* best-effort */ } });
+  shutdown.onExitKill(() => { try { require('./lib/web/urlfetch').killAllBrowsersSync(); } catch { /* best-effort */ } });
   // Same backstop for document-parse children: a child wedged in a synchronous native parse can't act on its
   // own self-guards, so SIGKILL any still-live parse child on every exit path — it can never orphan.
   shutdown.onExitKill(() => { try { require('./lib/indexing/extractprocess').killAllChildrenSync(); } catch { /* best-effort */ } });
@@ -327,18 +327,18 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   shutdown.onExitKill(() => { try { require('./lib/mcp/client').killAllConnectorsSync(); } catch { /* best-effort */ } });
   shutdown.register(
     'OCR cache flush',
-    async () => { require('./lib/ocrcache').flush(); },
+    async () => { require('./lib/cache/ocrcache').flush(); },
     // Sync fallback for the 'exit' path — flushing is a synchronous writeFileSync,
     // so it works even when the event loop is already stopping.
-    () => { require('./lib/ocrcache').flush(); },
+    () => { require('./lib/cache/ocrcache').flush(); },
   );
   shutdown.register(
     'contextual-retrieval cache flush',
     async () => { require('./lib/indexing/context').flush(); },
     () => { try { require('./lib/indexing/context').flush(); } catch {} },
   );
-  shutdown.register('scheduled automations', async () => { require('./lib/automations').stopAll(); },
-                                              () => { try { require('./lib/automations').stopAll(); } catch {} });
+  shutdown.register('scheduled automations', async () => { require('./lib/notify/automations').stopAll(); },
+                                              () => { try { require('./lib/notify/automations').stopAll(); } catch {} });
   shutdown.register('pid file', async () => { removePidFile(); }, () => { removePidFile(); });
   shutdown.install();
 
@@ -351,11 +351,11 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   // In cluster mode a READ REPLICA coexists with the primary over a shared data dir, so it skips the
   // exclusive single-instance lock. The PRIMARY (and a normal single node) still takes it — which also
   // prevents a second primary from starting and creating two writers against the shared index.
-  if (!has('--no-instance-lock') && !require('./lib/cluster').isReplica()) {
+  if (!has('--no-instance-lock') && !require('./lib/ops/cluster').isReplica()) {
     const { APP_NAME } = require('./lib/constants');
     // Wait a little longer than the graceful-shutdown hard cap, so a slow teardown of a previous instance
     // (up to that cap) still hands off cleanly instead of this one refusing.
-    const lock = await require('./lib/instancelock').acquire(require('./lib/config').DATA_DIR, { waitMs: shutdown.HARD_TIMEOUT_MS + 4000 });
+    const lock = await require('./lib/ops/instancelock').acquire(require('./lib/config').DATA_DIR, { waitMs: shutdown.HARD_TIMEOUT_MS + 4000 });
     if (!lock.ok) {
       console.error(`\n✖ Another copy of ${APP_NAME} is already running against this data directory`);
       console.error(`  (process ${lock.holder && lock.holder.pid} on ${lock.holder && lock.holder.host}).`);
@@ -390,7 +390,7 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   // It MUST be armed BEFORE the (possibly long or wedged) index build below: if it were armed after
   // `await initIndex()` and a rebuild stalled — e.g. a chat model chosen as the embeddings model, which
   // can't embed — the watch would never start, and the launcher going away would leave us orphaned.
-  const supervise = require('./lib/supervise');
+  const supervise = require('./lib/ops/supervise');
   const exitWithParent = !has('--no-exit-with-parent') && (
     (args.includes('--desktop') && !process.stdin.isTTY) ||
     supervise.exitsWithParent({ isTTY: process.stdin.isTTY, hasIpc: Boolean(process.send), kind: supervise.stdinKind() })
@@ -423,7 +423,7 @@ const startServer = async ({ forceRebuild = false } = {}) => {
         if (line.trim() === 'quit') return stop();
         if (line.startsWith('ingest\t')) {
           const paths = line.slice('ingest\t'.length).split('\t').filter(Boolean);
-          try { require('./lib/desktopdrop').ingestLocalPaths(paths).catch(() => {}); } catch {}
+          try { require('./lib/indexing/desktopdrop').ingestLocalPaths(paths).catch(() => {}); } catch {}
         }
       }
       // Bounded so stray input without a newline can't grow the buffer without limit, but generous enough to
@@ -441,15 +441,15 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   // Pre-flight: warn (don't block) if Ollama is unreachable or configured models
   // aren't pulled, so a first-time user gets a clear heads-up up front instead of a
   // confusing failure mid-question. Fire-and-forget — never delays startup.
-  require('./lib/preflight').runPreflight();
+  require('./lib/ai/preflight').runPreflight();
   // Scheduled automations run in this long-lived server process; start() schedules
   // them after a short delay so the index finishes warming first.
-  require('./lib/automations').start();
+  require('./lib/notify/automations').start();
   // The web server is already listening and the UI/socket path degrades gracefully when
   // the index isn't ready ("still building…"), so an index-build failure must NOT take
   // the whole server down. Log it and stay up; the file watcher and manual rebuild can
   // recover it without a restart.
-  const cluster = require('./lib/cluster');
+  const cluster = require('./lib/ops/cluster');
   if (cluster.isReplica()) {
     // READ REPLICA: never build or mutate the shared index — the primary owns all writes. Load the active
     // workspace read-only and poll for the primary's updates (picked up via the manifest mtime). No watcher,
@@ -487,23 +487,23 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   if (!cluster.isReplica()) { sweepOrphanVectors().catch(() => {}); }
   // Boot-integrity self-checks (warn-only). Fire-and-forget after the index settles so a
   // check can compare the built index against config; a finding is logged, never fatal.
-  require('./lib/watchdog').run({ audit: true }).catch(() => {});
+  require('./lib/ops/watchdog').run({ audit: true }).catch(() => {});
   // Re-run the sweep periodically. Lokyni is a long-running service, so some findings only
   // appear after boot — a disk that fills, an audit log tampered with, an automation whose
   // cron drifts. Unref'd so it never holds the process open; cleared on shutdown.
   const watchdogTimer = setInterval(
-    () => { require('./lib/watchdog').run({ audit: true }).catch(() => {}); },
+    () => { require('./lib/ops/watchdog').run({ audit: true }).catch(() => {}); },
     6 * 60 * 60 * 1000,
   );
   watchdogTimer.unref();
-  shutdown.register('watchdog timer', async () => { clearInterval(watchdogTimer); try { require('./lib/watchdog').stop(); } catch {} }, () => clearInterval(watchdogTimer));
+  shutdown.register('watchdog timer', async () => { clearInterval(watchdogTimer); try { require('./lib/ops/watchdog').stop(); } catch {} }, () => clearInterval(watchdogTimer));
 
   // Actively sweep expired auth-session files so a user who signs in once and never returns doesn't leave a
   // stale credential-hash file forever (lazy expiry only reaps a session that is looked up again). Unref'd so
   // it never holds the process open; the per-file deletes are idempotent, so it is safe on every node of a
   // shared-data-dir cluster. Runs on every deployment mode (single-user too — a cheap no-op when empty).
   try {
-    const pruneTimer = require('./lib/authsessions').startPrune(require('./lib/config').DATA_DIR);
+    const pruneTimer = require('./lib/auth/authsessions').startPrune(require('./lib/config').DATA_DIR);
     shutdown.register('session prune', async () => { clearInterval(pruneTimer); }, () => clearInterval(pruneTimer));
   } catch (_) { /* session prune is best-effort */ }
 
@@ -515,7 +515,7 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   try {
     const { LOG_PATH, ERR_PATH } = require('./lib/service');
     const LOG_MAX_BYTES = 10 * 1024 * 1024;   // ~10 MB each, plus one retained .1 generation
-    const capLogs = () => require('./lib/logcap').capFiles([LOG_PATH, ERR_PATH], LOG_MAX_BYTES).catch(() => {});
+    const capLogs = () => require('./lib/ops/logcap').capFiles([LOG_PATH, ERR_PATH], LOG_MAX_BYTES).catch(() => {});
     capLogs();   // once at boot
     const logCapTimer = setInterval(capLogs, 30 * 60 * 1000);
     logCapTimer.unref();
