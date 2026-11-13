@@ -20,7 +20,7 @@
 
 // lokyni.js — the command-line entry point. Kept slim: it checks the runtime, routes the CLI commands,
 // and (for the server path) registers orderly shutdown and starts the web server. All user-facing CLI
-// text lives in lib/clihelp.js. Runtime flags are command-line arguments, not environment variables;
+// text lives in lib/cli/. Runtime flags are command-line arguments, not environment variables;
 // `debug` is read directly from argv in lib/config.js (const DEBUG = process.argv.includes('debug')).
 
 // Fail fast with a clear message on an unsupported Node. Lokyni's core dependencies — the HTTP client
@@ -510,7 +510,7 @@ const startServer = async ({ forceRebuild = false } = {}) => {
   // Bound the supervisor-written log files so a long-running install can't fill the disk. When
   // run under pm2, launchd, or systemd, stdout/stderr are redirected into these files and
   // nothing rotates them; the cap copies one prior generation aside and truncates in place
-  // (see lib/logcap.js). A no-op when run from a terminal (the files don't exist). The desktop
+  // (see lib/ops/logcap.js). A no-op when run from a terminal (the files don't exist). The desktop
   // app uses its own rotated log instead, so these are simply absent there.
   try {
     const { LOG_PATH, ERR_PATH } = require('./lib/service');
