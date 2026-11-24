@@ -1373,10 +1373,10 @@ These settings control how Lokyni understands follow-up questions and manages lo
   - **At query time.** If a question names two or more entities the graph knows, the relationships connecting them become an extra query and their documents are pulled in. This is recall only — the model still answers from real, cited passages.
   - **Model and safety.** It reads documents with the main chat model unless you set `graphRagModel`. It is best-effort: a failed extraction simply adds nothing to the graph for that document, and it can never block or slow indexing or a question.
 - `useAdaptiveRetrieval` — adaptive routing for the extra-recall passes above. When on, a cheap, deterministic complexity check runs RAG-Fusion and HyDE only for involved questions (comparative, multi-part, multi-entity, or long) while a simple factual lookup takes the fast single-query path — saving the extra model call and vector searches where they add little. It only has an effect when RAG-Fusion or HyDE is enabled. Opt-in; defaults to `false`. Also toggleable in Advanced → Retrieval.
-- `useSuggestedQuestions` — a master switch for follow-up suggestion chips. When on (the default) and **Suggest follow-ups** is turned on in the composer's Tools menu, a short auxiliary model call after each grounded answer proposes a few natural next questions, shown as one-click chips under the answer. The call runs after the answer finishes streaming, so it never delays the reply. Set to `false` to disable the feature entirely. Also toggleable under Settings → Features (the composer's Follow-ups option still arms it per session).
+- `useSuggestedQuestions` — a master switch for follow-up suggestion chips. When on (the default) and **Suggest follow-ups** is turned on in the composer's Tools menu, a short auxiliary model call after each grounded answer proposes a few natural next questions, shown as one-click chips under the answer. The call runs after the answer finishes streaming. A new question cancels it, so it does not delay the next answer. Set to `false` to disable the feature entirely. Also toggleable under Settings → Features (the composer's Follow-ups option still arms it per session).
 - `showAnswerConfidence` — show a high, medium, or low confidence chip on each document answer. The verdict is blended from signals already computed (support, retrieval strength, figures, and stability when it is on), so it costs no extra model call on its own. Defaults to `true`. See [Answer Confidence](#answer-confidence). Also toggleable under Settings → Advanced → Conversation.
 - `abstainOnWeakEvidence` — when on, a low-confidence answer carries a short honest caution beneath its controls, so a thin answer reads as tentative. The answer text is unchanged, and a confident single-source answer is never flagged. Defaults to `false`.
-- `useSemanticEntropy` — when on, each answer is re-asked a few times and the replies are compared by meaning; an answer that changes run to run is marked unstable, which lowers its confidence. It catches an answer the model cannot reproduce. It adds `semanticEntropySamples` minus one extra generations per answer, so it is opt-in. Runs after the answer streams, so it never delays the reply. Defaults to `false`.
+- `useSemanticEntropy` — when on, each answer is re-asked a few times and the replies are compared by meaning; an answer that changes run to run is marked unstable, which lowers its confidence. It catches an answer the model cannot reproduce. It adds `semanticEntropySamples` minus one extra generations per answer, so it is opt-in. It runs after the answer streams. A new question cancels it, so it does not delay the next answer. Defaults to `false`.
 - `semanticEntropySamples` — how many replies to compare when `useSemanticEntropy` is on, from `2` to `6`. The first is the answer itself, so the extra cost is this value minus one. Defaults to `3`.
 
 ### Cross-Encoder Reranker Settings
@@ -1536,7 +1536,7 @@ While a query runs, the composer shows what the pipeline is doing — *searching
 
 ### Conversational Follow-ups
 
-Follow-up questions are understood in context. "Tell me more", "go on", "give me an in-depth analysis", "what else does it talk about?", and "what about that?" all continue the current subject rather than starting a fresh search. A continuation is recognized by meaning, not by a fixed list of phrases: any follow-up that names no new subject of its own — in any language — is treated as a continuation, so it is never quietly steered onto a different document. Short documents are served in full on a follow-up so the model always has the complete material to expand on, and references to earlier discussion are resolved from the conversation.
+Follow-up questions are understood in context. "Tell me more", "go on", "give me an in-depth analysis", "what else does it talk about?", and "what about that?" all continue the current subject rather than starting a fresh search. A continuation is recognized by meaning, not by a fixed list of phrases: any follow-up that names no new subject of its own — in any language — is treated as a continuation, so it is never quietly steered onto a different document. A vague continuation stays on the documents already in the conversation. Lokyni keeps the primary document and any other conversation document you named, so an unrelated file that happens to contain the words "tell" or "more" cannot take over the answer. Short documents are served in full on a follow-up so the model always has the complete material to expand on, and references to earlier discussion are resolved from the conversation.
 
 A follow-up that asks whether the current subject relates to or mentions something else — "does it mention X?", "what does this have to do with X?", "is there anything about X here?" — stays on the documents you are discussing and answers from them. If the term isn't there, Lokyni tells you plainly ("these documents don't mention X") instead of jumping to a different document that happens to contain it.
 
@@ -1658,7 +1658,9 @@ stays silent unless it finds a number the sources don't contain, so a clean answ
 For deeper checking, turn on **Verify the answer** in the composer's Tools menu. Each answer then also
 gets a model judge that grades every claim as *supported*, *partial*, or *unsupported*. This second
 pass is opt-in because it adds an LLM call after each answer; the number check above is always on
-because it is free. When Verify is on, a badge appears next to the answer:
+because it is free. The judge uses the same chat model unless you set a separate one. If you ask a new
+question while it is running, Lokyni cancels that check so the next answer does not queue behind it.
+Turn Verify off when you want the fastest replies. When Verify is on, a badge appears next to the answer:
 
 - **✓ Grounded** — every checked claim is supported by the sources (shown when a distinct `faithfulnessModel` graded the answer — see below).
 - **✓ Self-checked** — the neutral version of the above: the answer model checked its own output and flagged nothing, when no separate judge is configured.
@@ -1724,7 +1726,7 @@ previous instructions" is described, never obeyed.
 
 ### Answer Confidence
 
-Every document answer can carry one plain verdict on how sure Lokyni is: high, medium, or low confidence. It is a single, holistic signal. It is different from the small dot on each source, which shows how strongly that one document matched. The chip is shown by default and is free, because it blends signals Lokyni has already computed and makes no extra model call of its own.
+Every document answer can carry one plain verdict on how sure Lokyni is: high, medium, or low confidence. It is a single, holistic signal. It is different from the small dot on each source, which shows how strongly that one document matched. The chip is shown by default and is free, because it blends signals Lokyni has already computed and makes no extra model call of its own. The chip appears only when there is an answer to judge. An empty or failed turn has no confidence chip.
 
 The verdict starts from whether the sources actually support the answer. That is the same check the Verify badge uses, when Verify is on. When Verify is off, it starts from how strongly a document matched the question. From there it can only move down. An invented figure, or an answer that only weakly matches the documents, lowers it. Hover the chip to read the reasons in plain language.
 
@@ -1750,7 +1752,7 @@ When you open a document in the viewer, the **◈ Related** button in the toolba
 
 ### Rebuilding the Index
 
-If search or related documents start behaving oddly — most often after moving your documents folder, which changes the internal file paths the index is keyed on — you can rebuild the index from scratch. Go to **Settings → Rebuild index** and confirm; Lokyni wipes the search index and re-reads every document. Your documents are never modified, only the index Lokyni builds from them. This runs against the live server (no restart needed) and can take a while for a large library. The same is available from the command line as `node lokyni.js --reindex` (which prompts for confirmation; add `--yes` to skip it).
+If search or related documents start behaving oddly — most often after moving your documents folder, which changes the internal file paths the index is keyed on — you can rebuild the index from scratch. Go to **Settings → Rebuild index** and confirm; Lokyni wipes the search index and re-reads every document. Your documents are never modified, only the index Lokyni builds from them. This runs against the live server (no restart needed) and can take a while for a large library. OCR is the slowest part. A scanned page can take a few seconds, so a large scan-heavy library can take tens of minutes. The same is available from the command line as `node lokyni.js --reindex` (which prompts for confirmation; add `--yes` to skip it).
 
 **The index keeps itself tidy, so you rarely need to rebuild just to reclaim space.** When you delete a document, its vectors are removed from the index as part of the same update. On the rare occasion a few are left behind — a document first indexed by a much older version, or an update interrupted by a crash — Lokyni clears them automatically at the next start: a quick background pass removes any vectors whose document is gone, without re-reading or re-embedding anything. It only ever removes vectors it can confirm belong to a deleted document, so nothing you still have is touched, and it runs quietly out of the way of your searches.
 
@@ -2207,7 +2209,7 @@ Only when you ask it to. Clicking the 🌐 toggle for a message, or accepting an
 Only if you use a remote provider (such as OpenAI). With a local Ollama model and the reranker already cached, Lokyni runs completely offline.
 
 #### What file types can I use?
-Text and documents (`.txt`, `.log`, `.md`, `.pdf`, `.docx`, `.pptx`, `.epub`, `.html`, `.htm`), spreadsheets and data files (`.csv`, `.tsv`, `.xlsx`, `.xlsm`, `.json`), and images (`.png`, `.jpg`, `.jpeg`, `.webp`, `.tif`, `.tiff`). Text is extracted from documents for indexing; scanned PDFs and images are read with OCR when it's enabled.
+Text and documents (`.txt`, `.log`, `.md`, `.pdf`, `.docx`, `.pptx`, `.epub`, `.html`, `.htm`), spreadsheets and data files (`.csv`, `.tsv`, `.xlsx`, `.xlsm`, `.json`), and images (`.png`, `.jpg`, `.jpeg`, `.webp`, `.tif`, `.tiff`). Text is extracted from documents for indexing; scanned PDFs and images are read with OCR when it's enabled. Word files saved in the older 97-2003 format are read too, even when they carry a `.docx` name.
 
 #### How large can my documents be?
 Individual uploads can be up to 500 MB. Very large documents are handled with larger passage windows so answers still have enough context, though extremely large files take longer to index and search. Very long filenames are shortened to keep the stored path within Windows limits, and the extension is preserved.
@@ -2223,6 +2225,9 @@ Lokyni only answers from your indexed documents. If a question has no meaningful
 
 #### Why are my answers short or degenerate?
 This usually means the model's context window (`numCtx`) is too small to hold the retrieved passages plus the grounding rules, causing the system prompt to be truncated. Leave `numCtx` on automatic (the default `0`) so Lokyni sizes it to the model, or set a larger explicit value if your model and hardware support it. Reducing `passageSize` also helps.
+
+#### Why did the model return no answer?
+A model can time out before it produces any text. Lokyni then says that the model did not return an answer and asks you to try again. It does not show a confidence badge or sources for that empty turn. The topic-switch line appears only after the model starts answering. If this happens often, check that your provider is responding and the model is loaded. For a local model, check Ollama. Then try a smaller model if needed. Verify and Follow-ups also run extra model calls; turn them off when you want the fastest replies.
 
 #### Do I have to rebuild the index when I add documents?
 No. Lokyni watches the documents folder and indexes new, changed, or removed files automatically, applying the update atomically without interrupting queries.
