@@ -195,7 +195,7 @@ Once you have met all the requirements, follow these steps to install Lokyni:
 
 On first start, if no language model is reachable, Lokyni shows a connect screen that walks you through pointing it at Ollama or an OpenAI-compatible provider, so you don't have to edit `config.json` by hand. For a local Ollama it lists the models you already have installed, so you pick one from a dropdown instead of typing its name. If you don't have local AI hardware, choose OpenAI on that screen — it works on any computer and needs only an API key. (Your documents are still indexed and searchable without this — embedding is handled by the built-in local model — but writing answers needs a language model.)
 
-On first start, Lokyni builds the vector index from any documents already present in `data/documents`. Subsequent starts load the cached index and only re-index files that changed.
+On first start, Lokyni builds the vector index from any documents already present in `data/documents`. Subsequent starts load the cached index and only re-index files that changed. Searches use the loaded index while that update runs.
 
 ## Running in the Background (pm2)
 
