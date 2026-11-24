@@ -1280,12 +1280,19 @@ details.settings-filtered { display: none; }
 .settings-row-full { flex-direction: column; align-items: stretch; gap: 6px; }
 /* Multi-select language grid (OCR). Native checkboxes in labels keep the list keyboard- and
    screen-reader-native; the grid reflows to one or two columns on a phone. */
-.settings-language-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; }
+.settings-language-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 18px; }
 .settings-language { display: flex; align-items: center; gap: 6px; min-height: 24px; font-size: 12px; color: var(--text-mid); cursor: pointer; }
 /* These are <label>s inside a .settings-row, so the generic .settings-row label rule would force a
    160px minimum and prevent them from fitting the grid column. Keep them content-sized. */
 #cfg-ocr-languages .settings-language { min-width: 0; flex-shrink: 1; }
-.settings-language input { accent-color: var(--accent); margin: 0; }
+/* The generic text-input rule above also matches these nested checkboxes (they are descendants of a
+   .settings-row), stretching each box to fill the rest of its grid cell and pushing the label to the
+   right. Keep every language checkbox a fixed control so the labels form one left-aligned column. */
+.settings-language input[type="checkbox"] {
+  flex: 0 0 16px; width: 16px; height: 16px;
+  padding: 0; margin: 0; background: none; border: none;
+  accent-color: var(--accent); cursor: pointer;
+}
 .settings-language.base { color: var(--text-dim); cursor: default; }
 #ocr-languages-note { font-size: 11px; color: var(--text-dim); margin: 0; }
 #source-list { display: flex; flex-direction: column; gap: 4px; }
