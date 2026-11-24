@@ -1146,7 +1146,7 @@ There are two ways to get documents into Lokyni: let it index folders you alread
 | Plain text | `.txt`, `.log` | Indexed as-is |
 | Markdown | `.md` | Rendered in the document viewer |
 | PDF | `.pdf` | Text is extracted; scanned/image PDFs are read with OCR (see [Scanned Documents (OCR)](#scanned-documents-ocr)) |
-| Word | `.docx` | Text is extracted for indexing; embedded images can be described (see [Scanned Documents (OCR)](#scanned-documents-ocr)) |
+| Word | `.docx` | Text is extracted for indexing, including legacy Word 97-2003 files that carry a `.docx` name; embedded images can be described (see [Scanned Documents (OCR)](#scanned-documents-ocr)) |
 | PowerPoint | `.pptx` | Slide text and speaker notes are extracted in order; embedded images can be described (see [Scanned Documents (OCR)](#scanned-documents-ocr)) |
 | EPUB | `.epub` | Chapters are extracted in reading order (spine) and stripped to text |
 | HTML | `.html`, `.htm` | Readable text is extracted; scripts, styles, and markup are stripped |
